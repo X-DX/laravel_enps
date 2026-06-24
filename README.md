@@ -1,59 +1,184 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ENPS Project
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Project Overview
 
-## About Laravel
+Migration of the existing ENPS application from:
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Framework: CodeIgniter 3
+- Database: MariaDB/MySQL
+- PHP Version: 7.4 (XAMPP)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+To:
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Framework: Laravel 13
+- Database: PostgreSQL 17
+- PHP Version: 8.4
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+# Tech Stack
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Frontend & Backend
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
+- PHP: 8.4.22
+- Composer: 2.10.1
+- PostgreSQL: 17.10
+- UI: Blade, Tailwind CSS
+- Interactivity: Alpine.js (Lightweight Interactivity)
+- Dynamic Components: Livewire 4
+- Laravel Auth
+- Laravel default cache
+- Database Queue
+- Laravel Excel
+- Dompdf
+- Laravel Logs
 
-## Agentic Development
+---
 
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+# PostgreSQL Migration
+
+# pgloader Installation
+
+Installed via Homebrew:
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+brew install pgloader
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+Version:
 
-## Contributing
+```text
+pgloader 3.6.10
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+---
 
-## Code of Conduct
+# Migration Issues Encountered
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+During migration PostgreSQL rejected invalid MySQL dates.
 
-## Security Vulnerabilities
+Examples:
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```text
+0000-00-00
+2015-07-00
+```
 
-## License
+These values are accepted by old MySQL/MariaDB systems but are invalid in PostgreSQL.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# laravel_enps
+---
+
+# Data Cleanup Performed
+
+## allotment_accnt_no
+
+Columns updated to nullable:
+
+```text
+dob
+doapptorder
+doj
+dor
+closure_date
+entry_date
+```
+
+Invalid dates converted to NULL.
+
+### Invalid Date Counts
+
+| Column       |  Rows |
+| ------------ | ----: |
+| dob          |   373 |
+| doapptorder  |   213 |
+| doj          |   256 |
+| dor          |  3082 |
+| closure_date | 33593 |
+| entry_date   |  8206 |
+
+---
+
+## receipt_reg
+
+Invalid date columns:
+
+```text
+order_date
+draft_date
+```
+
+Fixed:
+
+```text
+0000-00-00
+2015-07-00
+```
+
+---
+
+## first_receipt
+
+Invalid date columns:
+
+```text
+draft_date
+order_date
+```
+
+Fixed:
+
+```text
+0000-00-00
+```
+
+---
+
+# Successful PostgreSQL Migration
+
+Migration Tool:
+
+```bash
+pgloader mysql://root@localhost/enps postgresql://aruproy@localhost/enps
+```
+
+Result:
+
+```text
+SUCCESS
+```
+
+Total Imported Rows:
+
+```text
+4,238,972
+```
+
+Database Size Migrated:
+
+```text
+632.8 MB
+```
+
+Migration Time:
+
+```text
+26.768 seconds
+```
+
+---
+
+# Laravel Project
+
+Project Name:
+
+```text
+enps
+```
+
+Created Using:
+
+```bash
+composer create-project laravel/laravel enps
+```
+
+---
