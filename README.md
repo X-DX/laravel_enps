@@ -182,3 +182,131 @@ composer create-project laravel/laravel enps
 ```
 
 ---
+
+# 1. Complete Login Flow (Legacy SHA-256 → bcrypt Upgrade)
+
+```bash
+Login.php
+│
+├── Auth::attempt()
+│
+├── Auth Facade
+│
+├── AuthManager
+│
+├── config/auth.php
+│ │
+│ └── web guard
+│
+├── SessionGuard::attempt()
+│
+├── CreatesUserProviders
+│ │
+│ └── EloquentUserProvider
+│
+├── User Model
+│ │
+│ └── user_account table
+│
+├── EloquentUserProvider::validateCredentials()
+│
+├── HashManager
+│
+├── config/hashing.php
+│ │
+│ └── legacy driver
+│
+├── AppServiceProvider
+│ │
+│ └── Hash::extend('legacy')
+│
+├── LegacyPasswordHasher::check()
+│ │
+│ ├── SHA-256?
+│ ├── hash('sha256', plain password)
+│ └── hash_equals()
+│
+├── Password verified
+│
+├── SessionGuard::rehashPasswordIfRequired()
+│
+├── EloquentUserProvider::rehashPasswordIfRequired()
+│
+├── LegacyPasswordHasher::needsRehash()
+│ │
+│ └── true
+│
+├── LegacyPasswordHasher::make()
+│ │
+│ └── bcrypt hash created
+│
+└── user->forceFill(...)->save()
+│ |
+| └── UPDATE user_account SET password = bcrypt
+```
+
+Overview
+
+```bash
+This project authenticates users against the legacy user_account table. The original production system stored passwords as unsalted SHA-256 hashes, while the new Laravel application uses bcrypt. To avoid forcing all existing users to reset their passwords, the application supports both formats during login and automatically upgrades legacy passwords to bcrypt after the user's first successful login.
+```
+
+---
+
+# 2. Captch + Rate Limiting
+
+```bash
+Open Login Page
+        │
+        ▼
+<img src="/captcha">
+        │
+        ▼
+GET /captcha
+        │
+        ▼
+Generate random code
+        │
+        ▼
+Store code in session
+        │
+        ▼
+Return PNG image
+        │
+        ▼
+User enters User ID + Password + CAPTCHA
+        │
+        ▼
+login()
+        │
+        ▼
+Validation
+        │
+        ▼
+Rate limit check
+        │
+        ├── Too many attempts → Stop
+        ▼
+Verify CAPTCHA
+        │
+        ├── Wrong → RateLimiter::hit() → Stop
+        ▼
+Auth::attempt()
+        │
+        ├── Wrong password → RateLimiter::hit() → Stop
+        ▼
+Account enabled?
+        │
+        ├── No → Logout + RateLimiter::hit() → Stop
+        ▼
+RateLimiter::clear()
+        │
+        ▼
+Forget CAPTCHA
+        │
+        ▼
+Regenerate session ID
+        │
+        ▼
+Redirect to dashboard
+```

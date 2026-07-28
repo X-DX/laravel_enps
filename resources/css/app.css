@@ -1,5 +1,9 @@
 @import 'tailwindcss';
 
+/* Class-based dark mode (toggle a `.dark` class on <html>) instead of the
+   default prefers-color-scheme media query, so we can offer a manual switch. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
@@ -7,3 +11,77 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* ------------------------------------------------------------------ */
+/* Landing page enhancements                                          */
+/* ------------------------------------------------------------------ */
+
+@keyframes float-y {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-26px); }
+}
+@keyframes float-y-2 {
+    0%, 100% { transform: translateY(0) translateX(0); }
+    50% { transform: translateY(22px) translateX(-16px); }
+}
+@keyframes gradient-pan {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+}
+
+.anim-float { animation: float-y 8s ease-in-out infinite; }
+.anim-float-2 { animation: float-y-2 11s ease-in-out infinite; }
+
+/* Animated gradient text */
+.gradient-text {
+    background-size: 200% auto;
+    animation: gradient-pan 6s ease infinite;
+}
+
+/* Reveal-on-scroll (toggled by an IntersectionObserver) */
+.reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity .7s cubic-bezier(.2, .7, .2, 1), transform .7s cubic-bezier(.2, .7, .2, 1);
+}
+.reveal.in { opacity: 1; transform: none; }
+
+/* Custom cursor (ring lags behind, dot is instant) */
+.cursor-ring, .cursor-dot {
+    position: fixed;
+    top: 0; left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    border-radius: 9999px;
+    will-change: transform;
+}
+.cursor-ring {
+    width: 34px; height: 34px; margin: -17px 0 0 -17px;
+    border: 1.5px solid rgb(99 102 241 / .8);
+    transition: width .2s ease, height .2s ease, margin .2s ease, background-color .2s ease;
+}
+.cursor-ring.grow {
+    width: 56px; height: 56px; margin: -28px 0 0 -28px;
+    background: rgb(99 102 241 / .12);
+}
+.cursor-dot {
+    width: 6px; height: 6px; margin: -3px 0 0 -3px;
+    background: rgb(99 102 241);
+}
+@media (pointer: coarse) {
+    .cursor-ring, .cursor-dot { display: none; }
+}
+
+/* Subtle grid backdrop, faded toward the edges */
+.grid-backdrop {
+    background-image:
+        linear-gradient(to right, rgb(148 163 184 / .14) 1px, transparent 1px),
+        linear-gradient(to bottom, rgb(148 163 184 / .14) 1px, transparent 1px);
+    background-size: 44px 44px;
+    -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+
+/* Native <details> disclosure used by the sidebar — hide the default marker */
+summary { list-style: none; }
+summary::-webkit-details-marker { display: none; }
