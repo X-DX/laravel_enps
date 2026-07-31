@@ -68,10 +68,12 @@ class DdoTest extends TestCase
             $t->string('treasury_name', 150);
         });
         Schema::create('ddo_master', function (Blueprint $t) {
-            $t->bigIncrements('ddo_code');                 // auto-generated (matches the Postgres sequence)
+            $t->bigIncrements('ddo_sl');                    // the serial PK (renamed from ddo_code)
             $t->string('ddo_name', 150)->nullable();
-            $t->string('loc_code', 10)->nullable();        // legacy column, retained
-            $t->string('treasury_code', 10)->nullable();   // the current link
+            $t->string('loc_code', 10)->nullable();         // legacy column, retained
+            $t->string('treasury_code', 10)->nullable();    // the treasury link
+            $t->string('ddo_code', 7)->nullable();          // the 7-digit business code
+            $t->unique(['treasury_code', 'ddo_code']);      // no duplicate code within a treasury
         });
 
         Permission::create(['key' => 'adminsection.ddo_entry', 'name' => 'DDO Entry', 'group' => 'adminsection', 'legacy_menu_id' => 5]);
@@ -105,8 +107,8 @@ class DdoTest extends TestCase
     private function seedDdos(): void
     {
         DB::table('ddo_master')->insert([
-            ['ddo_code' => 100, 'ddo_name' => 'DDO Alpha', 'treasury_code' => '01'],   // Kolkata Treasury
-            ['ddo_code' => 200, 'ddo_name' => 'DDO Beta', 'treasury_code' => '02'],    // Howrah Treasury
+            ['ddo_sl' => 100, 'ddo_name' => 'DDO Alpha', 'treasury_code' => '01', 'ddo_code' => '0000001'],   // Kolkata Treasury
+            ['ddo_sl' => 200, 'ddo_name' => 'DDO Beta', 'treasury_code' => '02', 'ddo_code' => '0000002'],    // Howrah Treasury
         ]);
     }
 
@@ -120,22 +122,25 @@ class DdoTest extends TestCase
         $this->actingAs($this->makeUser('admin', 'A'))->get('/master/ddos')->assertOk()->assertSee('DDO Master');
     }
 
-    public function test_it_creates_a_ddo_with_an_auto_generated_code(): void
+    public function test_it_creates_a_ddo_with_an_auto_generated_serial(): void
     {
         Livewire::actingAs($this->makeUser('admin', 'A'))
             ->test(Ddos::class)
             ->call('create')
             ->set('form_district', '24')   // District → Treasury cascade in the form
             ->set('treasury_code', '01')
+            ->set('ddo_code', '0012345')   // the 7-digit business code (typed)
             ->set('ddo_name', 'DDO New')
             ->call('save')
             ->assertHasNoErrors();
 
         $row = Ddo::where('ddo_name', 'DDO New')->first();
         $this->assertNotNull($row);
-        $this->assertGreaterThan(0, $row->ddo_code);        // the DB assigned it
+        $this->assertGreaterThan(0, $row->ddo_sl);        // the DB assigned the serial
+        $this->assertSame('0012345', $row->ddo_code);     // the code we typed (leading zeros kept)
         $this->assertSame('01', (string) $row->treasury_code);
     }
+
 
     public function test_it_requires_a_valid_treasury(): void
     {
@@ -171,27 +176,30 @@ class DdoTest extends TestCase
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertDatabaseHas('ddo_master', ['ddo_code' => 100, 'ddo_name' => 'DDO Alpha Renamed', 'treasury_code' => '01']);
+        $this->assertDatabaseHas('ddo_master', ['ddo_sl' => 100, 'ddo_name' => 'DDO Alpha Renamed', 'treasury_code' => '01']);
     }
 
     public function test_editing_a_legacy_ddo_starts_with_no_treasury_then_saves_the_chosen_one(): void
     {
-        // A legacy DDO with a location but NO treasury (the progressive-backfill start point).
-        DB::table('ddo_master')->insert(['ddo_code' => 300, 'ddo_name' => 'DDO Legacy', 'loc_code' => '1', 'treasury_code' => null]);
+        // A legacy DDO with a location but NO treasury and NO code yet (progressive-backfill start).
+        DB::table('ddo_master')->insert(['ddo_sl' => 300, 'ddo_name' => 'DDO Legacy', 'loc_code' => '1', 'treasury_code' => null, 'ddo_code' => null]);
 
         Livewire::actingAs($this->makeUser('admin', 'A'))
             ->test(Ddos::class)
             ->call('edit', 300)
             ->assertSet('treasury_code', '')       // no treasury yet → placeholder
+            ->assertSet('ddo_code', '')            // no code yet either
             ->assertSet('form_district', '')
             ->set('form_district', '24')
             ->set('treasury_code', '01')
+            ->set('ddo_code', '0012345')           // must supply a code now — it's required
             ->call('save')
             ->assertHasNoErrors();
 
-        // loc_code is preserved; treasury_code is now set.
-        $this->assertDatabaseHas('ddo_master', ['ddo_code' => 300, 'loc_code' => '1', 'treasury_code' => '01']);
+        // loc_code is preserved; treasury_code and ddo_code are now filled in.
+        $this->assertDatabaseHas('ddo_master', ['ddo_sl' => 300, 'loc_code' => '1', 'treasury_code' => '01', 'ddo_code' => '0012345']);
     }
+
 
     public function test_changing_the_form_district_clears_the_treasury(): void
     {
@@ -209,7 +217,7 @@ class DdoTest extends TestCase
 
         Livewire::actingAs($this->makeUser('admin', 'A'))->test(Ddos::class)->call('delete', 100);
 
-        $this->assertDatabaseMissing('ddo_master', ['ddo_code' => 100]);
+        $this->assertDatabaseMissing('ddo_master', ['ddo_sl' => 100]);
     }
 
     public function test_it_filters_by_district(): void
@@ -254,8 +262,50 @@ class DdoTest extends TestCase
             ->set('filterTreasury', '01')
             ->call('export');
 
-        Excel::assertDownloaded('ddos-'.now()->format('Y-m-d').'.xlsx', function (DdosExport $export) {
+        Excel::assertDownloaded('ddos-' . now()->format('Y-m-d') . '.xlsx', function (DdosExport $export) {
             return $export->query()->count() === 1;
         });
+    }
+    public function test_it_blocks_a_duplicate_code_within_the_same_treasury(): void
+    {
+        // An existing DDO: code 0012345 in treasury 01.
+        DB::table('ddo_master')->insert(['ddo_sl' => 100, 'ddo_name' => 'DDO Alpha', 'treasury_code' => '01', 'ddo_code' => '0012345']);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(Ddos::class)
+            ->set('form_district', '24')
+            ->set('treasury_code', '01')       // SAME treasury
+            ->set('ddo_code', '0012345')       // SAME code
+            ->set('ddo_name', 'DDO Duplicate')
+            ->call('save')
+            ->assertHasErrors(['ddo_code' => 'unique']);
+    }
+
+    public function test_it_allows_the_same_code_in_a_different_treasury(): void
+    {
+        DB::table('ddo_master')->insert(['ddo_sl' => 100, 'ddo_name' => 'DDO Alpha', 'treasury_code' => '01', 'ddo_code' => '0012345']);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(Ddos::class)
+            ->set('form_district', '25')
+            ->set('treasury_code', '02')       // DIFFERENT treasury
+            ->set('ddo_code', '0012345')       // same code — allowed here
+            ->set('ddo_name', 'DDO Other')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('ddo_master', ['treasury_code' => '02', 'ddo_code' => '0012345']);
+    }
+
+    public function test_it_rejects_a_code_that_is_not_7_digits(): void
+    {
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(Ddos::class)
+            ->set('form_district', '24')
+            ->set('treasury_code', '01')
+            ->set('ddo_code', '123')           // too short
+            ->set('ddo_name', 'DDO Short')
+            ->call('save')
+            ->assertHasErrors(['ddo_code' => 'regex']);
     }
 }

@@ -18,6 +18,7 @@ This is the "why we did it this way" memory of the rebuild — read alongside
 | M3 add-on — State in District Master | [M3-state-master.md](M3-state-master.md) | ✅ new `state_master` + `dist_master.state_code` (progressive backfill; 90 tests) |
 | M3 add-on — Treasury Master | [M3-treasury-master.md](M3-treasury-master.md) | ✅ net-new `treasury_master` screen; first data-driven sidebar item added from scratch; digit-string PK preserves leading zeros (100 tests) |
 | M3 change — DDO Master: Location → Treasury | [M3-ddo-treasury-swap.md](M3-ddo-treasury-swap.md) | ✅ additive `ddo_master.treasury_code` (nullable+FK); DDO re-pointed to Treasury; `loc_code` kept; progressive backfill (101 tests) |
+| M3 change — DDO Master: real DDO Code | [M3-ddo-code-restructure.md](M3-ddo-code-restructure.md) | ✅ rename serial `ddo_code`→`ddo_sl`; new 7-digit `ddo_code` unique per treasury; hand-typed one concept at a time (104 tests) |
 | M4 — Subscriber & Account | _pending_ | ⬜ |
 | M5 — PRAN & Letters | _pending_ | ⬜ |
 | M6 — Money Intake | _pending_ | ⬜ |

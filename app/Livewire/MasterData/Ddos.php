@@ -10,6 +10,7 @@ use App\Models\Treasury;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Validation\Rule;
 
 /**
  * DDO Master — the biggest master (3,085 rows). A DDO belongs to a TREASURY, so both the
@@ -39,6 +40,9 @@ class Ddos extends Component
     /** The treasury this DDO belongs to. */
     public string $treasury_code = '';
 
+    /** The 7-digit business DDO code (unique within its treasury). */
+    public string $ddo_code = '';
+
     /** The code of the DDO being edited; null = creating (code auto-assigned). */
     public ?int $editingCode = null;
 
@@ -52,6 +56,14 @@ class Ddos extends Component
         return [
             'ddo_name' => ['required', 'string', 'max:150'],
             'treasury_code' => ['required', 'string', 'exists:treasury_master,treasury_code'],
+            'ddo_code' => [
+                'required',
+                'string',
+                'regex:/^[0-9]{7}$/',
+                Rule::unique('ddo_master', 'ddo_code')
+                    ->where('treasury_code', $this->treasury_code)
+                    ->ignore($this->editingCode, 'ddo_sl'),
+            ],
         ];
     }
 
@@ -61,6 +73,10 @@ class Ddos extends Component
             'ddo_name.required' => 'Enter a DDO name.',
             'treasury_code.required' => 'Select a treasury.',
             'treasury_code.exists' => 'The selected treasury does not exist.',
+
+            'ddo_code.required' => 'Enter a DDO code.',
+            'ddo_code.regex' => 'The DDO code must be exactly 7 digits.',
+            'ddo_code.unique' => 'That DDO code already exists in the selected treasury.',
         ];
     }
 
@@ -84,7 +100,7 @@ class Ddos extends Component
 
     public function create(): void
     {
-        $this->reset(['ddo_name', 'form_district', 'treasury_code', 'editingCode']);
+        $this->reset(['ddo_name', 'form_district', 'treasury_code', 'ddo_code', 'editingCode']);
         $this->resetValidation();
         $this->showForm = true;
     }
@@ -93,8 +109,10 @@ class Ddos extends Component
     {
         $ddo = Ddo::with('treasury')->findOrFail($code);
 
-        $this->editingCode = $ddo->ddo_code;
+        $this->editingCode = $ddo->ddo_sl;
         $this->ddo_name = $ddo->ddo_name;
+        $this->ddo_code = (string) ($ddo->ddo_code ?? '');
+
         // Empty ('') for legacy DDOs with no treasury yet → the dropdowns show placeholders.
         $this->treasury_code = (string) ($ddo->treasury_code ?? '');
         // Pre-select the district so the cascading Treasury dropdown is populated.
@@ -114,17 +132,19 @@ class Ddos extends Component
             Ddo::whereKey($this->editingCode)->update([
                 'ddo_name' => $validated['ddo_name'],
                 'treasury_code' => $validated['treasury_code'],
+                'ddo_code' => $validated['ddo_code'],
             ]);
         } else {
             // The database assigns ddo_code; new DDOs have no location (loc_code stays NULL).
             Ddo::create([
                 'ddo_name' => $validated['ddo_name'],
                 'treasury_code' => $validated['treasury_code'],
+                'ddo_code' => $validated['ddo_code'],
             ]);
         }
 
         $this->showForm = false;
-        $this->reset(['ddo_name', 'form_district', 'treasury_code', 'editingCode']);
+        $this->reset(['ddo_name', 'form_district', 'treasury_code', 'ddo_code', 'editingCode']);
         $this->notify('DDO saved.');
     }
 
@@ -134,7 +154,8 @@ class Ddos extends Component
 
         // No cross-table guard: DDOs are referenced by the huge transactional tables
         // (accounts/subscribers), so that integrity belongs to Phase B foreign keys.
-        Ddo::where('ddo_code', $code)->delete();
+        // Ddo::where('ddo_code', $code)->delete();
+        Ddo::whereKey($code)->delete();
         $this->notify('DDO deleted.');
     }
 
@@ -142,7 +163,7 @@ class Ddos extends Component
     {
         $this->authorize(self::ABILITY);
 
-        return Excel::download(new DdosExport($this->filterDistrict, $this->filterTreasury), 'ddos-'.now()->format('Y-m-d').'.xlsx');
+        return Excel::download(new DdosExport($this->filterDistrict, $this->filterTreasury), 'ddos-' . now()->format('Y-m-d') . '.xlsx');
     }
 
     public function render()
@@ -150,7 +171,7 @@ class Ddos extends Component
         $ddos = Ddo::query()
             ->with('treasury.district')   // nested eager-load for the Treasury + District columns
             ->forTreasuryFilter($this->filterDistrict, $this->filterTreasury)
-            ->orderBy('ddo_code')
+            ->orderBy('ddo_sl')
             ->paginate($this->perPage);
 
         return view('livewire.master-data.ddos', [

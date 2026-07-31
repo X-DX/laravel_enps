@@ -13,20 +13,19 @@ class DdosExport implements FromQuery, WithHeadings, WithMapping
     public function __construct(
         private readonly string $distCode = '',
         private readonly string $treasuryCode = '',
-    ) {
-    }
+    ) {}
 
     public function query(): Builder
     {
         return Ddo::query()
             ->with('treasury.district')
             ->forTreasuryFilter($this->distCode, $this->treasuryCode)
-            ->orderBy('ddo_code');
+            ->orderBy('ddo_sl');
     }
 
     public function headings(): array
     {
-        return ['DDO Code', 'DDO Name', 'Treasury Code', 'Treasury', 'District'];
+        return ['DDO Sl', 'DDO Code', 'DDO Name', 'Treasury Code', 'Treasury', 'District'];
     }
 
     /**
@@ -35,6 +34,7 @@ class DdosExport implements FromQuery, WithHeadings, WithMapping
     public function map($ddo): array
     {
         return [
+            $ddo->ddo_sl,
             $ddo->ddo_code,
             $ddo->ddo_name,
             $ddo->treasury_code,
