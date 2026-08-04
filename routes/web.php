@@ -17,6 +17,9 @@ use App\Support\Captcha\CaptchaService; // Generates CAPTCHA image
 use Illuminate\Support\Facades\Auth; // Handles login/logout
 use Illuminate\Support\Facades\Route; // Creates routes
 
+use App\Livewire\Accounts\Subscribers; // Entry Section: View All Accounts (M4, 4a)
+
+
 // Root URL
 Route::view('/', 'landing')->name('home');
 
@@ -95,5 +98,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/permissions', ManageUserPermissions::class)
             ->middleware('can:adminsection.add_update_user')
             ->name('admin.permissions');
+
+        // Entry Section — View All Accounts (M4, slice 4a).
+        Route::get('/accounts', Subscribers::class)
+            ->middleware('can:entrysection.view_all_accounts')
+            ->name('accounts.index');
     });
 });

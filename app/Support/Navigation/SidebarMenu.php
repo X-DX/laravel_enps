@@ -74,6 +74,8 @@ class SidebarMenu
         'adminsection.change_interest_rate' => 'settings.interest-rates',
         'adminsection.change_retirement_year' => 'settings.retirement-year',
         'adminsection.change_share_rate' => 'settings.contribution-share',
+
+        'entrysection.view_all_accounts' => 'accounts.index',
     ];
 
     /**
