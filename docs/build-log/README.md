@@ -19,7 +19,7 @@ This is the "why we did it this way" memory of the rebuild — read alongside
 | M3 add-on — Treasury Master | [M3-treasury-master.md](M3-treasury-master.md) | ✅ net-new `treasury_master` screen; first data-driven sidebar item added from scratch; digit-string PK preserves leading zeros (100 tests) |
 | M3 change — DDO Master: Location → Treasury | [M3-ddo-treasury-swap.md](M3-ddo-treasury-swap.md) | ✅ additive `ddo_master.treasury_code` (nullable+FK); DDO re-pointed to Treasury; `loc_code` kept; progressive backfill (101 tests) |
 | M3 change — DDO Master: real DDO Code | [M3-ddo-code-restructure.md](M3-ddo-code-restructure.md) | ✅ rename serial `ddo_code`→`ddo_sl`; new 7-digit `ddo_code` unique per treasury; hand-typed one concept at a time (104 tests) |
-| M4 — Subscriber & Account | [M4-4a-subscriber-list.md](M4-4a-subscriber-list.md) | 🟡 in progress (4a: read-only subscriber list — search/status/PRAN/Excel — 112 tests) |
+| M4 — Subscriber & Account | [4a list](M4-4a-subscriber-list.md) · [4b detail](M4-4b-subscriber-detail.md) | 🟡 in progress (4a list + 4b detail page — route-model binding, full legacy field set — 117 tests) |
 | M5 — PRAN & Letters | _pending_ | ⬜ |
 | M6 — Money Intake | _pending_ | ⬜ |
 | M7 — Contributions | _pending_ | ⬜ |

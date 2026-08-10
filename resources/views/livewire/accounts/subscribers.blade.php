@@ -73,7 +73,10 @@
                         @endif
                     </td>
                     <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ $sub->pran ? number_format($sub->pran->pran_no, 0, '.', '') : '—' }}</td>
-                    <td class="px-4 py-3 text-slate-700 dark:text-slate-200">{{ $sub->name }}</td>
+                    <td class="px-4 py-3">
+                        <a href="{{ route('accounts.show', $sub->id) }}" wire:navigate
+                            class="font-medium text-indigo-600 hover:underline dark:text-indigo-300">{{ $sub->name }}</a>
+                    </td>
                     <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ $sub->dob?->format('d-m-Y') ?? '—' }}</td>
                     <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ trim($sub->nameofdept) }}</td>
                     <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ $departments[trim($sub->nameofdept)] ?? '—' }}</td>

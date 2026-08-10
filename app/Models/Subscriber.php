@@ -23,6 +23,10 @@ class Subscriber extends Model
     protected $casts = [
         'dob' => 'date',
         'doj' => 'date',
+        'dor' => 'date',
+        'doapptorder' => 'date',
+        'entry_date' => 'date',
+        'finalize_date' => 'date',
         'isactive' => 'boolean',
     ];
 
