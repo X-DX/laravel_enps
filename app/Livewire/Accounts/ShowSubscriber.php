@@ -28,12 +28,12 @@ class ShowSubscriber extends Component
 
     public function render()
     {
-        $subscriber = Subscriber::with(['ddo.location', 'designationMaster', 'pran'])
+        $subscriber = Subscriber::with(['ddo.treasury', 'designationMaster', 'pran'])
             ->findOrFail($this->subscriberId);
 
         return view('livewire.accounts.show-subscriber', [
             'subscriber' => $subscriber,
-            'departments' => Department::find(trim($subscriber->nameofdept)),
+            'department' => Department::find(trim($subscriber->nameofdept)),
         ]);
     }
 }

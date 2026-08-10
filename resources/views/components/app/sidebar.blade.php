@@ -11,7 +11,7 @@
         <a href="{{ route('dashboard') }}"
             @class([
                 'flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium',
-                'bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' => request()->routeIs('dashboard'),
+                'bg-indigo-600 font-semibold text-white shadow-sm shadow-indigo-500/30 dark:bg-indigo-500' => request()->routeIs('dashboard'),
                 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5' => ! request()->routeIs('dashboard'),
             ])>
             <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" /></svg>
@@ -40,8 +40,8 @@
                                     @foreach ($sub['items'] as $item)
                                         <a href="{{ $item['url'] ?? '#' }}" title="{{ $item['label'] }}"
                                             @class([
-                                                'block truncate rounded-lg px-3 py-1.5 text-sm transition',
-                                                'bg-indigo-50 font-medium text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300' => $item['active'],
+                                                'flex items-center gap-2 truncate rounded-lg px-3 py-1.5 text-sm transition',
+                                                'bg-indigo-600 font-semibold text-white shadow-sm shadow-indigo-500/30 dark:bg-indigo-500' => $item['active'],
                                                 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white' => ! $item['active'],
                                             ])>
                                             {{ $item['label'] }}

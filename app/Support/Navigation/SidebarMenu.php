@@ -79,6 +79,14 @@ class SidebarMenu
     ];
 
     /**
+     * Detail / sub-pages that have no menu item of their own, but should still highlight
+     * (and open) a parent item. e.g. the subscriber detail page lights up "View All Accounts".
+     */
+    private const ACTIVE_ALIASES = [
+        'accounts.show' => 'accounts.index',
+    ];
+
+    /**
      * @return Collection<int, array{title:string, open:bool, subs:Collection}>
      */
     public function forUser(User $user): Collection
@@ -119,7 +127,7 @@ class SidebarMenu
             $sections[$sectionTitle]['subs'][$subTitle]['items'][] = [
                 'label' => trim((string) $r->menu_label),
                 'url' => $hasRoute ? route($routeName) : null,
-                'active' => $hasRoute && request()->routeIs($routeName),
+                'active' => $hasRoute && $this->isActive($routeName),
                 'permission' => $r->permission_key,
                 'menu_id' => $r->menu_id,
             ];
@@ -147,6 +155,21 @@ class SidebarMenu
                 ];
             })
             ->values();
+    }
+
+    /**
+     * Is the given route the current page — directly, or via an alias (e.g. a detail page
+     * that should light up its parent list item)?
+     */
+    private function isActive(string $routeName): bool
+    {
+        $current = request()->route()?->getName();
+
+        if ($current === null) {
+            return false;
+        }
+
+        return $current === $routeName || (self::ACTIVE_ALIASES[$current] ?? null) === $routeName;
     }
 
     /**

@@ -15,7 +15,7 @@ class ShowSubscriberTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['user_permission', 'role_permission', 'permissions', 'roles', 'user_account', 'allotment_accnt_no', 'pran_no', 'department', 'ddo_master', 'designation_master', 'loc_master'] as $t) {
+        foreach (['user_permission', 'role_permission', 'permissions', 'roles', 'user_account', 'allotment_accnt_no', 'pran_no', 'department', 'ddo_master', 'designation_master', 'treasury_master'] as $t) {
             Schema::dropIfExists($t);
         }
 
@@ -53,14 +53,15 @@ class ShowSubscriberTest extends TestCase
             $t->integer('first_login')->default(0);
             $t->date('last_pwd_change')->nullable();
         });
-        Schema::create('loc_master', function (Blueprint $t) {
-            $t->bigInteger('loc_code')->primary();
-            $t->string('loc_name')->nullable();
+        Schema::create('treasury_master', function (Blueprint $t) {
+            $t->string('treasury_code', 10)->primary();
+            $t->string('treasury_name', 150);
+            $t->bigInteger('dist_code')->nullable();
         });
         Schema::create('ddo_master', function (Blueprint $t) {
             $t->bigIncrements('ddo_sl');
             $t->string('ddo_name', 150)->nullable();
-            $t->bigInteger('loc_code')->nullable();
+            $t->string('treasury_code', 10)->nullable();
         });
         Schema::create('designation_master', function (Blueprint $t) {
             $t->bigIncrements('designation_id');
@@ -106,8 +107,8 @@ class ShowSubscriberTest extends TestCase
 
         Permission::create(['key' => 'entrysection.view_all_accounts', 'name' => 'View All Accounts', 'group' => 'entrysection', 'legacy_menu_id' => 154]);
 
-        DB::table('loc_master')->insert(['loc_code' => 17, 'loc_name' => 'NAHARLAGUN']);
-        DB::table('ddo_master')->insert(['ddo_sl' => 589, 'ddo_name' => 'DIR SMALL SAVINGS', 'loc_code' => 17]);
+        DB::table('treasury_master')->insert(['treasury_code' => '01', 'treasury_name' => 'ITANAGAR TREASURY', 'dist_code' => 1]);
+        DB::table('ddo_master')->insert(['ddo_sl' => 589, 'ddo_name' => 'DIR SMALL SAVINGS', 'treasury_code' => '01']);
         DB::table('designation_master')->insert(['designation_id' => 1, 'designation' => 'L.D.C']);
         DB::table('department')->insert(['dept_code' => '01', 'dept_name' => 'AP/ACCTT']);
         DB::table('pran_no')->insert(['account_no' => 'AP/NPS/01/0001', 'pran_no' => 110016825057, 'ppan_no' => 'APNPS010001']);
@@ -167,7 +168,7 @@ class ShowSubscriberTest extends TestCase
             ->assertSee('MOTHER Y')            // mother
             ->assertSee('L.D.C')               // designation
             ->assertSee('AP/ACCTT')            // department (via trimmed dept code)
-            ->assertSee('NAHARLAGUN')          // office location (via the DDO's location)
+            ->assertSee('ITANAGAR TREASURY')   // treasury location (via the DDO's treasury)
             ->assertSee('DIR SMALL SAVINGS')   // DDO
             ->assertSee('Basic + DA')          // NPS pay label
             ->assertSee('71,732')              // pay, formatted
