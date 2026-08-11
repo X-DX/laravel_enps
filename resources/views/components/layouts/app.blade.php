@@ -7,6 +7,7 @@
     <title>{{ $title ?? 'eNPS' }}</title>
     <x-theme.init />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <style>[x-cloak]{display:none!important}</style>
 </head>
 <body class="min-h-full bg-slate-100 font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
     <div class="flex min-h-screen">

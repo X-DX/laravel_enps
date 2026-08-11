@@ -17,6 +17,37 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class Subscriber extends Model
 {
+    protected $fillable = [
+        // typed by the operator
+        'name',
+        'father_name',
+        'mother_name',
+        'single_mother_flag',
+        'appnt_ord_no',
+        'doapptorder',
+        'dob',
+        'doj',
+        'dor',
+        'designation',
+        'nameofdept',
+        'pension_type',
+        'pay',
+        'ddocode',
+        'name_nominee',
+        'name_nominee2',
+        'name_nominee3',
+        'starting_month',
+        'starting_fin_year',
+        // system-generated
+        'account_no',
+        'save_flag',
+        'user_id',
+        'flag_pt',
+        'closure_reason_id',
+        'entry_date',
+        'finalize_date',
+        'isactive',
+    ];
     protected $table = 'allotment_accnt_no';
     public $timestamps = false;
 

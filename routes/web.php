@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Route; // Creates routes
 
 use App\Livewire\Accounts\Subscribers; // Entry Section: View All Accounts (M4, 4a)
 use App\Livewire\Accounts\ShowSubscriber; // Entry Section: view one subscriber (M4, 4b)
+use App\Livewire\Accounts\IssueAccount; // Entry Section: Issue Account (M4, 4c)
 
 
 // Root URL
@@ -105,8 +106,14 @@ Route::middleware('auth')->group(function () {
             ->middleware('can:entrysection.view_all_accounts')
             ->name('accounts.index');
 
+        // Entry Section — Issue Account: register a new subscriber (M4, slice 4c).
+        Route::get('/accounts/issue', IssueAccount::class)
+            ->middleware('can:entrysection.issue_account')
+            ->name('accounts.issue');
+
         // Entry Section - view one subscriber (M4, slice 4b).
         Route::get('/accounts/{subscriber}', ShowSubscriber::class)
+            ->whereNumber('subscriber')
             ->middleware('can:entrysection.view_all_accounts')
             ->name('accounts.show');
     });

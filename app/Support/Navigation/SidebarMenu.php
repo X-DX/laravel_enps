@@ -76,6 +76,8 @@ class SidebarMenu
         'adminsection.change_share_rate' => 'settings.contribution-share',
 
         'entrysection.view_all_accounts' => 'accounts.index',
+        'entrysection.issue_account' => 'accounts.issue',
+
     ];
 
     /**

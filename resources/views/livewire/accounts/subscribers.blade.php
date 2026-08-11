@@ -1,9 +1,19 @@
 <div class="mx-auto max-w-6xl">
     {{-- Title --}}
-    <div class="mb-6">
-        <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">View All Accounts</h1>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Every subscriber and their allotted account number.</p>
+    <div class="mb-6 flex items-end justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">View All Accounts</h1>
+            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Every subscriber and their allotted account number.</p>
+        </div>
+        <a href="{{ route('accounts.issue') }}" wire:navigate
+            class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-400 hover:to-sky-400">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+            </svg>
+            New Account
+        </a>
     </div>
+
 
     {{-- Search · Status · Show --}}
     <div class="mb-4 flex flex-wrap items-center gap-3">
