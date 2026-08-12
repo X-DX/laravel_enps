@@ -106,6 +106,16 @@ Route::middleware('auth')->group(function () {
             ->middleware('can:entrysection.view_all_accounts')
             ->name('accounts.index');
 
+        Route::get('/accounts/pending', Subscribers::class)
+            ->middleware('can:entrysection.pending_issue_accounts')
+            ->defaults('mode', 'pending')
+            ->name('accounts.pending');
+
+        Route::get('/accounts/finalized', Subscribers::class)
+            ->middleware('can:entrysection.finalized_issued_account')
+            ->defaults('mode', 'finalized')
+            ->name('accounts.finalized');
+
         // Entry Section — Issue Account: register a new subscriber (M4, slice 4c).
         Route::get('/accounts/issue', IssueAccount::class)
             ->middleware('can:entrysection.issue_account')

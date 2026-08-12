@@ -76,7 +76,10 @@ class SidebarMenu
         'adminsection.change_share_rate' => 'settings.contribution-share',
 
         'entrysection.view_all_accounts' => 'accounts.index',
+        'entrysection.pending_issue_accounts' => 'accounts.pending',
+        'entrysection.finalized_issued_account' => 'accounts.finalized',
         'entrysection.issue_account' => 'accounts.issue',
+
 
     ];
 

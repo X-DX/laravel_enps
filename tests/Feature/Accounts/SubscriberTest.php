@@ -205,8 +205,38 @@ class SubscriberTest extends TestCase
             ->call('export');
 
         // Only the finalized subscriber is exported.
-        Excel::assertDownloaded('subscribers-'.now()->format('Y-m-d').'.xlsx', function (SubscribersExport $export) {
+        Excel::assertDownloaded('subscribers-all-'.now()->format('Y-m-d').'.xlsx', function (SubscribersExport $export) {
             return $export->query()->count() === 1;
         });
+    }
+
+    public function test_pending_mode_shows_only_pending_subscribers(): void
+    {
+        $this->seedSubscribers();
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(Subscribers::class, ['mode' => 'pending'])
+            ->assertSee('DRAFT PERSON')
+            ->assertDontSee('PONDITA MODI');
+    }
+
+    public function test_finalized_mode_shows_only_finalized_subscribers(): void
+    {
+        $this->seedSubscribers();
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(Subscribers::class, ['mode' => 'finalized'])
+            ->assertSee('PONDITA MODI')
+            ->assertDontSee('DRAFT PERSON');
+    }
+
+    public function test_it_downloads_the_list_as_a_pdf(): void
+    {
+        $this->seedSubscribers();
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(Subscribers::class)
+            ->call('pdf')
+            ->assertFileDownloaded('subscribers-all-'.now()->format('Y-m-d').'.pdf');
     }
 }

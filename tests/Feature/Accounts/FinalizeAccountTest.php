@@ -97,6 +97,8 @@ class FinalizeAccountTest extends TestCase
 
         Permission::create(['key' => 'entrysection.issue_account', 'name' => 'Issue Account', 'group' => 'entrysection', 'legacy_menu_id' => 152]);
         Permission::create(['key' => 'entrysection.view_all_accounts', 'name' => 'View All Accounts', 'group' => 'entrysection', 'legacy_menu_id' => 154]);
+        Permission::create(['key' => 'entrysection.pending_issue_accounts', 'name' => 'Pending Issue Accounts', 'group' => 'entrysection', 'legacy_menu_id' => 155]);
+        Permission::create(['key' => 'entrysection.finalized_issued_account', 'name' => 'Finalized Issued Account', 'group' => 'entrysection', 'legacy_menu_id' => 156]);
 
         DB::table('account_sequence')->insert(['dept_code' => '15', 'account_seq_no' => 41]);
         DB::table('department')->insert(['dept_code' => '15', 'dept_name' => 'AP/HEALTH']);
@@ -223,5 +225,37 @@ class FinalizeAccountTest extends TestCase
             ->test(Subscribers::class)
             ->call('toggleSelectAll')
             ->assertSet('selected', [(string) $a, (string) $b]);   // the finalized one (c) is excluded
+    }
+
+    /* ---- delete (pending drafts only) ---- */
+
+    public function test_delete_selected_removes_pending_drafts(): void
+    {
+        $a = $this->seedDraft('Person A');
+        $b = $this->seedDraft('Person B');
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(Subscribers::class, ['mode' => 'pending'])
+            ->set('selected', [(string) $a, (string) $b])
+            ->call('deleteSelected')
+            ->assertSet('selected', []);
+
+        $this->assertDatabaseMissing('allotment_accnt_no', ['id' => $a]);
+        $this->assertDatabaseMissing('allotment_accnt_no', ['id' => $b]);
+    }
+
+    public function test_delete_never_removes_a_finalized_account(): void
+    {
+        $draft = $this->seedDraft('Still Draft');
+        $final = $this->seedDraft('Finalized One');
+        DB::table('allotment_accnt_no')->where('id', $final)->update(['save_flag' => 'F', 'account_no' => 'AP/NPS/15/0001']);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(Subscribers::class, ['mode' => 'pending'])
+            ->set('selected', [(string) $draft, (string) $final])   // both ticked
+            ->call('deleteSelected');
+
+        $this->assertDatabaseMissing('allotment_accnt_no', ['id' => $draft]);   // draft gone
+        $this->assertDatabaseHas('allotment_accnt_no', ['id' => $final]);       // finalized untouched
     }
 }
