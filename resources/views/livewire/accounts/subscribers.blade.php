@@ -51,6 +51,17 @@
             </svg>
             Excel
         </button>
+        @can('entrysection.issue_account')
+        <button wire:click="finalize" type="button" @disabled(count($selected)===0)
+            wire:confirm="Finalize {{ count($selected) }} selected subscriber(s)? This allots their account numbers and can't be undone."
+            class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow transition hover:from-indigo-400 hover:to-sky-400 disabled:cursor-not-allowed disabled:opacity-50">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+            </svg>
+            Finalize selected ({{ count($selected) }})
+        </button>
+        @endcan
+
 
     </div>
 
@@ -59,6 +70,15 @@
         <table class="min-w-full divide-y divide-slate-200 dark:divide-white/10">
             <thead>
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                    @can('entrysection.issue_account')
+                    <th class="px-4 py-3">
+                        <input type="checkbox" wire:click="toggleSelectAll"
+                            @checked(count($pagePendingIds)> 0 && count(array_diff($pagePendingIds, $selected)) === 0)
+                        @disabled(count($pagePendingIds) === 0)
+                        class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30">
+                    </th>
+                    @endcan
+
                     <th class="px-4 py-3">Sl</th>
                     <th class="px-4 py-3">Account No</th>
                     <th class="px-4 py-3">Pran No</th>
@@ -74,6 +94,15 @@
             <tbody class="divide-y divide-slate-100 dark:divide-white/5">
                 @forelse ($subscribers as $sub)
                 <tr wire:key="sub-{{ $sub->id }}" class="text-sm transition hover:bg-slate-50 dark:hover:bg-white/5">
+                    @can('entrysection.issue_account')
+                    <td class="px-4 py-3">
+                        @if ($sub->save_flag === 'T')
+                        <input type="checkbox" wire:model.live="selected" value="{{ $sub->id }}"
+                            class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30">
+                        @endif
+                    </td>
+                    @endcan
+
                     <td class="px-4 py-3 text-slate-500 dark:text-slate-400">{{ $subscribers->firstItem() + $loop->index }}</td>
                     <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">
                         @if ($sub->save_flag === 'T')
@@ -103,7 +132,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="10" class="px-4 py-10 text-center text-sm text-slate-400">No subscribers found.</td>
+                    <td colspan="11" class="px-4 py-10 text-center text-sm text-slate-400">No subscribers found.</td>
                 </tr>
                 @endforelse
             </tbody>
