@@ -48,13 +48,53 @@ class IssueAccount extends Component
     public string $starting_month = '';
     public string $starting_fin_year = '';
 
+    /* edit mode */
+    public ?int $editingId = null;      // null = issuing a new account; set = editing this one
+    public bool $isFinalized = false;   // a finalized account freezes Department + Pension Type
+    public string $account_no = '';     // shown read-only when editing a finalized account
+
     /** Retirement age (from the retirement_year setting; usually 60). */
     private int $retirementAge = 60;
 
-    public function mount(): void
+    public function mount(?Subscriber $subscriber = null): void
     {
-        $this->authorize(self::ABILITY);
+        if ($subscriber?->exists) {
+            $this->authorize('entrysection.edit_issued_account');
+            $this->loadForEdit($subscriber);
+        } else {
+            $this->authorize(self::ABILITY);
+        }
+
         $this->retirementAge = (int) (DB::table('retirement_year')->value('year') ?? 60);
+    }
+
+    /** Pre-fill every form field from an existing subscriber (edit mode). */
+    private function loadForEdit(Subscriber $subscriber): void
+    {
+        $this->editingId = $subscriber->id;
+        $this->isFinalized = $subscriber->save_flag === 'F';
+        $this->account_no = (string) ($subscriber->account_no ?? '');
+
+        $this->name = (string) $subscriber->name;
+        $this->father_name = (string) $subscriber->father_name;
+        $this->mother_name = (string) $subscriber->mother_name;
+        $this->single_mother_flag = (bool) $subscriber->single_mother_flag;
+        $this->appnt_ord_no = (string) $subscriber->appnt_ord_no;
+        $this->doapptorder = $subscriber->doapptorder?->format('Y-m-d') ?? '';
+        $this->dob = $subscriber->dob?->format('Y-m-d') ?? '';
+        $this->doj = $subscriber->doj?->format('Y-m-d') ?? '';
+        $this->dor = $subscriber->dor?->format('Y-m-d') ?? '';
+        $this->designation = (string) $subscriber->designation;
+        $this->nameofdept = trim((string) $subscriber->nameofdept);
+        $this->pension_type = $subscriber->pension_type ?: 'N';
+        $this->pay = (string) $subscriber->pay;
+        $this->ddocode = (string) $subscriber->ddocode;
+        $this->treasury_code = (string) ($subscriber->ddo?->treasury_code ?? '');
+        $this->name_nominee = (string) $subscriber->name_nominee;
+        $this->name_nominee2 = (string) $subscriber->name_nominee2;
+        $this->name_nominee3 = (string) $subscriber->name_nominee3;
+        $this->starting_month = (string) $subscriber->starting_month;
+        $this->starting_fin_year = (string) $subscriber->starting_fin_year;
     }
 
     /** Changing the Treasury Location clears the (now-stale) DDO — its list refills below. */
@@ -124,6 +164,12 @@ class IssueAccount extends Component
 
     public function save(): void
     {
+        // Editing an existing account takes a different path (UPDATE, not INSERT).
+        if ($this->editingId !== null) {
+            $this->updateSubscriber();
+            return;
+        }
+
         $this->authorize(self::ABILITY);
 
         $this->validate();
@@ -160,6 +206,47 @@ class IssueAccount extends Component
 
         $this->reset();   // clear the form for the next entry
         $this->dispatch('notify', type: 'success', message: 'Subscriber saved as a draft.');
+    }
+
+    /** Update the edited subscriber. A finalized account freezes department + pension type. */
+    private function updateSubscriber(): void
+    {
+        $this->authorize('entrysection.edit_issued_account');
+
+        $subscriber = Subscriber::findOrFail($this->editingId);
+
+        // A finalized account's number is derived from department + pension type, so those are
+        // frozen — snap them back to the stored values before we validate or save.
+        if ($this->isFinalized) {
+            $this->nameofdept = trim((string) $subscriber->nameofdept);
+            $this->pension_type = $subscriber->pension_type ?: 'N';
+        }
+
+        $this->validate();
+
+        $subscriber->update([
+            'name' => $this->name,
+            'father_name' => $this->single_mother_flag ? null : $this->father_name,
+            'mother_name' => $this->mother_name ?: null,
+            'single_mother_flag' => $this->single_mother_flag ? 1 : 0,
+            'appnt_ord_no' => $this->appnt_ord_no,
+            'doapptorder' => $this->doapptorder,
+            'dob' => $this->dob,
+            'doj' => $this->doj,
+            'dor' => $this->dor,
+            'designation' => (int) $this->designation,
+            'nameofdept' => $this->nameofdept,
+            'pension_type' => $this->pension_type,
+            'pay' => (int) $this->pay,
+            'ddocode' => (int) $this->ddocode,
+            'name_nominee' => $this->name_nominee,
+            'name_nominee2' => $this->name_nominee2 ?: null,
+            'name_nominee3' => $this->name_nominee3 ?: null,
+            'starting_month' => $this->starting_month,
+            'starting_fin_year' => (int) $this->starting_fin_year,
+        ]);
+
+        $this->dispatch('notify', type: 'success', message: 'Account updated.');
     }
 
     public function render()

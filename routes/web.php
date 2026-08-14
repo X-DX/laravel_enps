@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route; // Creates routes
 use App\Livewire\Accounts\Subscribers; // Entry Section: View All Accounts (M4, 4a)
 use App\Livewire\Accounts\ShowSubscriber; // Entry Section: view one subscriber (M4, 4b)
 use App\Livewire\Accounts\IssueAccount; // Entry Section: Issue Account (M4, 4c)
+use App\Livewire\Accounts\CloseAccount; // Entry Section: Close Account (M4, slice 4f)
 
 
 // Root URL
@@ -121,10 +122,20 @@ Route::middleware('auth')->group(function () {
             ->middleware('can:entrysection.issue_account')
             ->name('accounts.issue');
 
+        // Entry Section — Edit an existing account (M4, slice 4g). Same form as Issue, in edit mode.
+        Route::get('/accounts/{subscriber}/edit', IssueAccount::class)
+            ->whereNumber('subscriber')
+            ->middleware('can:entrysection.edit_issued_account')
+            ->name('accounts.edit');
+
         // Entry Section - view one subscriber (M4, slice 4b).
         Route::get('/accounts/{subscriber}', ShowSubscriber::class)
             ->whereNumber('subscriber')
             ->middleware('can:entrysection.view_all_accounts')
             ->name('accounts.show');
+
+        Route::get('/accounts/close', CloseAccount::class)
+            ->middleware('can:entrysection.close_account')
+            ->name('accounts.close');
     });
 });

@@ -79,7 +79,7 @@ class SidebarMenu
         'entrysection.pending_issue_accounts' => 'accounts.pending',
         'entrysection.finalized_issued_account' => 'accounts.finalized',
         'entrysection.issue_account' => 'accounts.issue',
-
+        'entrysection.close_account' => 'accounts.close',
 
     ];
 
@@ -89,6 +89,15 @@ class SidebarMenu
      */
     private const ACTIVE_ALIASES = [
         'accounts.show' => 'accounts.index',
+    ];
+
+    /**
+     * Permission keys whose legacy menu item should NOT appear in the sidebar — the feature
+     * lives elsewhere. `edit_issued_account` is a per-row action on the Pending / Finalized
+     * screens, not a standalone menu item.
+     */
+    private const HIDDEN = [
+        'entrysection.edit_issued_account',
     ];
 
     /**
@@ -111,6 +120,10 @@ class SidebarMenu
 
         foreach ($rows as $r) {
             if (! filled($r->menu) || ! $user->hasPermissionTo($r->permission_key)) {
+                continue;
+            }
+
+            if (in_array($r->permission_key, self::HIDDEN, true)) {
                 continue;
             }
 

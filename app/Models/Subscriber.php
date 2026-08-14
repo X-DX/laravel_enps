@@ -58,6 +58,7 @@ class Subscriber extends Model
         'doapptorder' => 'date',
         'entry_date' => 'date',
         'finalize_date' => 'date',
+        'closure_date' => 'datetime',
         'isactive' => 'boolean',
     ];
 
@@ -83,6 +84,13 @@ class Subscriber extends Model
         return $this->hasOne(PranNo::class, 'account_no', 'account_no');
     }
 
+    /** Why this account was closed (closure_reason_id → m_closure_reason.id). Null if open. */
+    public function closureReason(): BelongsTo
+    {
+        return $this->belongsTo(ClosureReason::class, 'closure_reason_id', 'id');
+    }
+
+
     /** Search (name/account no) + status filter — shared by the list and the Excel export. */
     public function scopeFilter(Builder $query, string $search, string $status): Builder
     {
@@ -95,5 +103,20 @@ class Subscriber extends Model
                 });
             })
             ->when($status !== '', fn($q) => $q->where('save_flag', $status));
+    }
+
+    /** Closed accounts (finalized + inactive) with an optional name/account-no search. */
+    public function scopeClosedFilter(Builder $query, string $search): Builder
+    {
+        return $query
+            ->where('save_flag', 'F')
+            ->where('isactive', false)
+            ->when($search !== '', function ($q) use ($search) {
+                $term = '%' . strtolower($search) . '%';
+                $q->where(function ($w) use ($term) {
+                    $w->whereRaw('LOWER(name) LIKE ?', [$term])
+                        ->orWhereRaw('LOWER(account_no) LIKE ?', [$term]);
+                });
+            });
     }
 }

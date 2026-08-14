@@ -122,6 +122,9 @@
                     <th class="px-4 py-3">Designation</th>
                     <th class="px-4 py-3">DDO</th>
                     <th class="px-4 py-3">Status</th>
+                    @if (in_array($mode, ['pending', 'finalized']))
+                    <th class="px-4 py-3 text-right">Actions</th>
+                    @endif
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-white/5">
@@ -161,10 +164,23 @@
                         <span class="rounded-md bg-amber-300 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-300">Pending</span>
                         @endif
                     </td>
+                    @if (in_array($mode, ['pending', 'finalized']))
+                    <td class="px-4 py-3 text-right">
+                        @can('entrysection.edit_issued_account')
+                        <a href="{{ route('accounts.edit', $sub->id) }}" wire:navigate
+                            class="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
+                            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" />
+                            </svg>
+                            Edit
+                        </a>
+                        @endcan
+                    </td>
+                    @endif
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="11" class="px-4 py-10 text-center text-sm text-slate-400">No subscribers found.</td>
+                    <td colspan="12" class="px-4 py-10 text-center text-sm text-slate-400">No subscribers found.</td>
                 </tr>
                 @endforelse
             </tbody>
