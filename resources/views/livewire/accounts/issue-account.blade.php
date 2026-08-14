@@ -139,7 +139,7 @@
                 </div>
                 <div>
                     <label class="{{ $label }}">DDO</label>
-                    <x-searchable-select model="ddocode" :options="$ddoOptions" :placeholder="$treasury_code === '' ? 'Select a treasury first' : 'Select DDO…'" :disabled="$treasury_code === ''"
+                    <x-searchable-select model="ddocode" :options="$ddoOptions" :placeholder="$treasury_code === '' && ! $editingId ? 'Select a treasury first' : 'Select DDO…'" :disabled="! $editingId && $treasury_code === ''"
                         wire:key="ddo-{{ $treasury_code }}" />
                     @error('ddocode')
                         <p class="{{ $err }}">{{ $message }}</p>

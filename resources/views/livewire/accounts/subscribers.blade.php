@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-6xl">
+<div class="mx-auto max-w-7xl">
     @php
         $screens = [
             'all' => ['View All Accounts', 'Every subscriber and their allotted account number.'],
@@ -104,7 +104,7 @@
             <thead>
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     @if ($mode === 'pending')
-                    <th class="px-4 py-3">
+                    <th class="px-3 py-2">
                         <input type="checkbox" wire:click="toggleSelectAll"
                             @checked(count($pagePendingIds) > 0 && count(array_diff($pagePendingIds, $selected)) === 0)
                             @disabled(count($pagePendingIds) === 0)
@@ -112,18 +112,17 @@
                     </th>
                     @endif
 
-                    <th class="px-4 py-3">Sl</th>
-                    <th class="px-4 py-3">Account No</th>
-                    <th class="px-4 py-3">Pran No</th>
-                    <th class="px-4 py-3">Name</th>
-                    <th class="px-4 py-3">DOB</th>
-                    <th class="px-4 py-3">Dept Code</th>
-                    <th class="px-4 py-3">Department</th>
-                    <th class="px-4 py-3">Designation</th>
-                    <th class="px-4 py-3">DDO</th>
-                    <th class="px-4 py-3">Status</th>
+                    <th class="px-3 py-2">Sl</th>
+                    <th class="px-3 py-2">Account No</th>
+                    <th class="px-3 py-2">Pran No</th>
+                    <th class="px-3 py-2">Name</th>
+                    <th class="px-3 py-2">DOB</th>
+                    <th class="px-3 py-2">Department</th>
+                    <th class="px-3 py-2">Designation</th>
+                    <th class="px-3 py-2">DDO</th>
+                    <th class="px-3 py-2">Status</th>
                     @if (in_array($mode, ['pending', 'finalized']))
-                    <th class="px-4 py-3 text-right">Actions</th>
+                    <th class="px-3 py-2 text-right">Actions</th>
                     @endif
                 </tr>
             </thead>
@@ -131,7 +130,7 @@
                 @forelse ($subscribers as $sub)
                 <tr wire:key="sub-{{ $sub->id }}" class="text-sm transition hover:bg-slate-50 dark:hover:bg-white/5">
                     @if ($mode === 'pending')
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2">
                         @if ($sub->save_flag === 'T')
                         <input type="checkbox" wire:model.live="selected" value="{{ $sub->id }}"
                             class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30">
@@ -139,25 +138,24 @@
                     </td>
                     @endif
 
-                    <td class="px-4 py-3 text-slate-500 dark:text-slate-400">{{ $subscribers->firstItem() + $loop->index }}</td>
-                    <td class="px-4 py-3 font-medium text-slate-900 dark:text-white">
+                    <td class="px-3 py-2 text-slate-500 dark:text-slate-400">{{ $subscribers->firstItem() + $loop->index }}</td>
+                    <td class="px-3 py-2 font-medium text-slate-900 dark:text-white">
                         @if ($sub->save_flag === 'T')
                         <span class="rounded-md bg-amber-300 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-300">Pending</span>
                         @else
                         {{ $sub->account_no }}
                         @endif
                     </td>
-                    <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ $sub->pran ? number_format($sub->pran->pran_no, 0, '.', '') : '—' }}</td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $sub->pran ? number_format($sub->pran->pran_no, 0, '.', '') : '—' }}</td>
+                    <td class="px-3 py-2">
                         <a href="{{ route('accounts.show', $sub->id) }}" wire:navigate
                             class="font-medium text-indigo-600 hover:underline dark:text-indigo-300">{{ $sub->name }}</a>
                     </td>
-                    <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ $sub->dob?->format('d-m-Y') ?? '—' }}</td>
-                    <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ trim($sub->nameofdept) }}</td>
-                    <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ $departments[trim($sub->nameofdept)] ?? '—' }}</td>
-                    <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ $sub->designationMaster?->designation ?? '—' }}</td>
-                    <td class="px-4 py-3 text-slate-600 dark:text-slate-300">{{ $sub->ddo?->ddo_name ?? '—' }}</td>
-                    <td class="px-4 py-3">
+                    <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $sub->dob?->format('d-m-Y') ?? '—' }}</td>
+                    <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $departments[trim($sub->nameofdept)] ?? trim($sub->nameofdept) }}</td>
+                    <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $sub->designationMaster?->designation ?? '—' }}</td>
+                    <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $sub->ddo?->ddo_name ?? '—' }}</td>
+                    <td class="px-3 py-2">
                         @if ($sub->save_flag === 'F')
                         <span class="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Finalized</span>
                         @else
@@ -165,7 +163,7 @@
                         @endif
                     </td>
                     @if (in_array($mode, ['pending', 'finalized']))
-                    <td class="px-4 py-3 text-right">
+                    <td class="px-3 py-2 text-right">
                         @can('entrysection.edit_issued_account')
                         <a href="{{ route('accounts.edit', $sub->id) }}" wire:navigate
                             class="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
@@ -180,7 +178,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="12" class="px-4 py-10 text-center text-sm text-slate-400">No subscribers found.</td>
+                    <td colspan="11" class="px-4 py-10 text-center text-sm text-slate-400">No subscribers found.</td>
                 </tr>
                 @endforelse
             </tbody>

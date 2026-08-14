@@ -218,6 +218,24 @@ class EditAccountTest extends TestCase
         ]);
     }
 
+    public function test_edit_shows_the_ddo_even_when_its_treasury_is_not_linked(): void
+    {
+        // The common case in the real data: a DDO with no treasury_code.
+        DB::table('ddo_master')->insert(['ddo_sl' => 9, 'ddo_name' => 'UNLINKED DDO', 'treasury_code' => null]);
+        $sub = $this->seedSubscriber(['ddocode' => 9]);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(IssueAccount::class, ['subscriber' => $sub])
+            ->assertSet('ddocode', '9')
+            ->assertSet('treasury_code', '')      // nothing to derive
+            ->assertSee('UNLINKED DDO')           // ...but the DDO still shows as an option
+            ->set('name', 'Edited Name')
+            ->call('save')                        // and saving works without a treasury
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('allotment_accnt_no', ['id' => $sub->id, 'name' => 'Edited Name', 'ddocode' => 9]);
+    }
+
     public function test_editing_a_finalized_account_freezes_department_and_pension(): void
     {
         $sub = $this->seedSubscriber(['save_flag' => 'F', 'account_no' => 'AP/NPS/15/0001']);

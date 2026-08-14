@@ -141,7 +141,7 @@ class IssueAccount extends Component
             'nameofdept' => ['required', 'string', 'exists:department,dept_code'],
             'pension_type' => ['required', 'in:N,U'],
             'pay' => ['required', 'integer', 'min:1'],
-            'treasury_code' => ['required', 'string'],
+            'treasury_code' => [$this->editingId ? 'nullable' : 'required', 'string'],   // edit: only a filter helper, DDO is the real field
             'ddocode' => ['required', 'integer', 'exists:ddo_master,ddo_sl'],
             'name_nominee' => ['required', 'string'],
             'name_nominee2' => ['nullable', 'string'],
@@ -251,14 +251,26 @@ class IssueAccount extends Component
 
     public function render()
     {
+        // The cascade: the DDOs under the chosen Treasury Location.
+        $ddos = $this->treasury_code !== ''
+            ? Ddo::where('treasury_code', $this->treasury_code)->orderBy('ddo_name')->get(['ddo_sl', 'ddo_name', 'ddo_code'])
+            : collect();
+
+        // When editing, the account's own DDO may belong to a treasury that isn't linked yet —
+        // keep it in the list so it still shows as the selected option.
+        if ($this->ddocode !== '' && ! $ddos->contains(fn ($d) => (string) $d->ddo_sl === (string) $this->ddocode)) {
+            $current = Ddo::find((int) $this->ddocode, ['ddo_sl', 'ddo_name', 'ddo_code']);
+            if ($current) {
+                $ddos = collect([$current])->concat($ddos);
+            }
+        }
+
         return view('livewire.accounts.issue-account', [
             'treasuries' => Treasury::orderBy('treasury_name')->get(['treasury_code', 'treasury_name']),
             'departments' => Department::orderBy('dept_name')->get(['dept_code', 'dept_name']),
             'designations' => Designation::whereNotNull('designation')->where('designation', '!=', '')
                 ->orderBy('designation')->get(['designation_id', 'designation']),
-
-            // The cascade: only the DDOs under the chosen Treasury Location. 
-            'ddos' => $this->treasury_code !== '' ? Ddo::where('treasury_code', $this->treasury_code)->orderBy('ddo_name')->get(['ddo_sl', 'ddo_name', 'ddo_code']) : collect(),
+            'ddos' => $ddos,
         ]);
     }
 }
