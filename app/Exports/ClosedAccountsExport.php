@@ -25,7 +25,7 @@ class ClosedAccountsExport implements FromQuery, WithHeadings, WithMapping
 
     public function headings(): array
     {
-        return ['Account No', 'Name', 'Closure Reason', 'Closing Date', 'Deduction Month', 'Deduction Year'];
+        return ['Account No', 'Name', 'Closure Reason', 'Closing Date', 'Last Contribution Month', 'Last Contribution Year'];
     }
 
     /**
@@ -38,8 +38,8 @@ class ClosedAccountsExport implements FromQuery, WithHeadings, WithMapping
             $closure->subscriber?->name,
             $closure->reason?->reason,
             $closure->closing_date?->format('d-m-Y'),
-            $closure->deduction_month ? date('F', mktime(0, 0, 0, $closure->deduction_month, 1)) : '',
-            $closure->deduction_year,
+            $closure->last_contribution_month ? date('F', mktime(0, 0, 0, $closure->last_contribution_month, 1)) : '',
+            $closure->last_contribution_year,
         ];
     }
 }

@@ -73,25 +73,25 @@
                 @enderror
             </div>
 
-            {{-- Deduction month --}}
+            {{-- Last contribution month --}}
             <div>
-                <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Deduction Month</label>
-                <select wire:model="deductionMonth"
+                <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Last Contribution Month</label>
+                <select wire:model="lastContributionMonth"
                     class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
                     <option value="">-- Select month --</option>
                     @foreach (range(1, 12) as $m)
                         <option value="{{ $m }}">{{ date('F', mktime(0, 0, 0, $m, 1)) }}</option>
                     @endforeach
                 </select>
-                @error('deductionMonth')
+                @error('lastContributionMonth')
                     <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $message }}</p>
                 @enderror
             </div>
 
-            {{-- Deduction year --}}
+            {{-- Last contribution year --}}
             <div>
-                <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Deduction Year</label>
-                <select wire:model="deductionYear"
+                <label class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Last Contribution Year</label>
+                <select wire:model="lastContributionYear"
                     class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
 
                     <option value="">-- Select year --</option>
@@ -104,7 +104,7 @@
                     @endforeach
 
                 </select>
-                @error('deductionYear')
+                @error('lastContributionYear')
                     <p class="mt-1 text-sm text-rose-600 dark:text-rose-400">{{ $message }}</p>
                 @enderror
             </div>
@@ -167,7 +167,7 @@
                         <th class="px-4 py-3">Name</th>
                         <th class="px-4 py-3">Closure Reason</th>
                         <th class="px-4 py-3">Closing Date</th>
-                        <th class="px-4 py-3">Deduction</th>
+                        <th class="px-4 py-3">Last Contribution</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100 dark:divide-white/5">
@@ -186,8 +186,8 @@
                             <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
                                 {{ $closure->closing_date?->format('d-m-Y') ?? '—' }}</td>
                             <td class="px-4 py-3 text-slate-600 dark:text-slate-300">
-                                {{ $closure->deduction_month ? date('F', mktime(0, 0, 0, $closure->deduction_month, 1)) : '—' }}
-                                {{ $closure->deduction_year }}
+                                {{ $closure->last_contribution_month ? date('F', mktime(0, 0, 0, $closure->last_contribution_month, 1)) : '—' }}
+                                {{ $closure->last_contribution_year }}
                             </td>
                         </tr>
                     @empty

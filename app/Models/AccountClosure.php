@@ -23,8 +23,8 @@ class AccountClosure extends Model
         'account_no',
         'closure_reason_id',
         'closing_date',
-        'deduction_month',
-        'deduction_year',
+        'last_contribution_month',
+        'last_contribution_year',
         'closed_by',
     ];
 

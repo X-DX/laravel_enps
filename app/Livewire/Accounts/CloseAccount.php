@@ -33,8 +33,8 @@ class CloseAccount extends Component
     public string $pranNo = '';        // shown read-only, from the chosen account
     public string $closeReason = '';
     public string $closingDate = '';
-    public string $deductionMonth = '';
-    public string $deductionYear = '';
+    public string $lastContributionMonth = '';
+    public string $lastContributionYear = '';
 
     /** Search box for the Closed Accounts register below. */
     public string $closedSearch = '';
@@ -90,15 +90,15 @@ class CloseAccount extends Component
             'accountNo' => 'required',
             'closeReason' => 'required|integer',
             'closingDate' => 'required|date',
-            'deductionMonth' => 'required|integer|between:1,12',
-            'deductionYear' => 'required|integer|min:2000|max:2100',
+            'lastContributionMonth' => 'required|integer|between:1,12',
+            'lastContributionYear' => 'required|integer|min:2000|max:2100',
         ], [
             'departmentCode.required' => 'Select a department.',
             'accountNo.required' => 'Select an account number.',
             'closeReason.required' => 'Select a closure reason.',
             'closingDate.required' => 'Enter the closing date.',
-            'deductionMonth.required' => 'Select the deduction month.',
-            'deductionYear.required' => 'Enter the deduction year.',
+            'lastContributionMonth.required' => 'Select the last contribution month.',
+            'lastContributionYear.required' => 'Enter the last contribution year.',
         ]);
 
         // Both steps commit together or not at all.
@@ -117,8 +117,8 @@ class CloseAccount extends Component
                 'account_no' => $this->accountNo,
                 'closure_reason_id' => (int) $this->closeReason,
                 'closing_date' => $this->closingDate,
-                'deduction_month' => (int) $this->deductionMonth,
-                'deduction_year' => (int) $this->deductionYear,
+                'last_contribution_month' => (int) $this->lastContributionMonth,
+                'last_contribution_year' => (int) $this->lastContributionYear,
                 'closed_by' => auth()->id(),
             ]);
 
@@ -131,7 +131,7 @@ class CloseAccount extends Component
         }
 
         $this->dispatch('notify', type: 'success', message: 'Account ' . $this->accountNo . ' closed.');
-        $this->reset(['departmentCode', 'accountNo', 'name', 'pranNo', 'closeReason', 'closingDate', 'deductionMonth', 'deductionYear']);
+        $this->reset(['departmentCode', 'accountNo', 'name', 'pranNo', 'closeReason', 'closingDate', 'lastContributionMonth', 'lastContributionYear']);
     }
 
     public function exportClosed()

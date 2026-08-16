@@ -92,8 +92,8 @@ class CloseAccountTest extends TestCase
             $t->string('account_no', 30)->primary();
             $t->bigInteger('closure_reason_id');
             $t->date('closing_date')->nullable();
-            $t->smallInteger('deduction_month')->nullable();
-            $t->smallInteger('deduction_year')->nullable();
+            $t->smallInteger('last_contribution_month')->nullable();
+            $t->smallInteger('last_contribution_year')->nullable();
             $t->string('closed_by', 10)->nullable();
             $t->timestamp('created_at')->nullable();
         });
@@ -164,7 +164,7 @@ class CloseAccountTest extends TestCase
             ->set('departmentCode', '15')
             ->set('accountNo', 'AP/NPS/15/0001')
             ->call('close')
-            ->assertHasErrors(['closeReason', 'closingDate', 'deductionMonth', 'deductionYear']);
+            ->assertHasErrors(['closeReason', 'closingDate', 'lastContributionMonth', 'lastContributionYear']);
     }
 
     public function test_it_closes_an_active_finalized_account(): void
@@ -177,8 +177,8 @@ class CloseAccountTest extends TestCase
             ->set('accountNo', 'AP/NPS/15/0001')
             ->set('closeReason', '1')
             ->set('closingDate', '2026-08-14')
-            ->set('deductionMonth', '8')
-            ->set('deductionYear', '2026')
+            ->set('lastContributionMonth', '8')
+            ->set('lastContributionYear', '2026')
             ->call('close')
             ->assertHasNoErrors()
             ->assertSet('accountNo', '');   // the form clears after closing
@@ -186,8 +186,8 @@ class CloseAccountTest extends TestCase
         $this->assertDatabaseHas('account_closure', [
             'account_no' => 'AP/NPS/15/0001',
             'closure_reason_id' => 1,
-            'deduction_month' => 8,
-            'deduction_year' => 2026,
+            'last_contribution_month' => 8,
+            'last_contribution_year' => 2026,
             'closed_by' => 'admin',
         ]);
         $this->assertDatabaseHas('allotment_accnt_no', ['id' => $id, 'isactive' => false]);
@@ -203,8 +203,8 @@ class CloseAccountTest extends TestCase
             ->set('accountNo', 'AP/NPS/15/0001')
             ->set('closeReason', '1')
             ->set('closingDate', '2026-08-14')
-            ->set('deductionMonth', '8')
-            ->set('deductionYear', '2026');
+            ->set('lastContributionMonth', '8')
+            ->set('lastContributionYear', '2026');
 
         // Someone else closes it between selection and submit.
         DB::table('allotment_accnt_no')->where('id', $id)->update(['isactive' => false]);
@@ -222,8 +222,8 @@ class CloseAccountTest extends TestCase
             'account_no' => 'AP/NPS/15/0009',
             'closure_reason_id' => 1,
             'closing_date' => '2026-06-24',
-            'deduction_month' => 6,
-            'deduction_year' => 2026,
+            'last_contribution_month' => 6,
+            'last_contribution_year' => 2026,
             'closed_by' => 'admin',
             'created_at' => now(),
         ]);

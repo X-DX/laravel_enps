@@ -21,7 +21,7 @@
 ## B. The big decision: a new table, not more flags
 
 The legacy stored closure right on the account (`isActive`, `closure_reason_id`, `closure_date`).
-We now also capture **closing date** + **deduction month/year**, and we want a clean *register*
+We now also capture **closing date** + **last-contribution month/year**, and we want a clean *register*
 of real closures. So we made a dedicated table:
 
 ```
@@ -29,8 +29,8 @@ account_closure  (one row per closed account)
 ├─ account_no        PRIMARY KEY  → also the link to allotment_accnt_no.account_no
 ├─ closure_reason_id  → m_closure_reason.id   (FK)
 ├─ closing_date       (operator-entered)
-├─ deduction_month    (1–12)
-├─ deduction_year     (e.g. 2026)
+├─ last_contribution_month    (1–12)
+├─ last_contribution_year     (e.g. 2026)
 ├─ closed_by          (user id, audit)
 └─ created_at
 ```
@@ -77,7 +77,7 @@ early, and **no** closure row is written — no double-close, no duplicate-key c
 ## D. The form (matches the legacy flow)
 
 A **cascade**: **Department → Account No → Name + PRAN appear → Reason + Closing Date +
-Deduction Month/Year → Close.** Choosing a department loads that department's *active* accounts;
+Last Contribution Month/Year → Close.** Choosing a department loads that department's *active* accounts;
 choosing an account fills Name + PRAN (read-only). Below the form is the **Closed accounts
 register** — searchable, with **Excel** and **PDF** export — read straight from `account_closure`
 (joined to the account for name).

@@ -76,8 +76,8 @@
                 <th>Name</th>
                 <th>Closure Reason</th>
                 <th>Closing Date</th>
-                <th>Deduction Month</th>
-                <th>Deduction Year</th>
+                <th>Last Contribution Month</th>
+                <th>Last Contribution Year</th>
             </tr>
         </thead>
         <tbody>
@@ -88,9 +88,9 @@
                     <td>{{ $closure->subscriber?->name ?? '—' }}</td>
                     <td>{{ $closure->reason?->reason ?? '—' }}</td>
                     <td>{{ $closure->closing_date?->format('d-m-Y') ?? '—' }}</td>
-                    <td>{{ $closure->deduction_month ? date('F', mktime(0, 0, 0, $closure->deduction_month, 1)) : '—' }}
+                    <td>{{ $closure->last_contribution_month ? date('F', mktime(0, 0, 0, $closure->last_contribution_month, 1)) : '—' }}
                     </td>
-                    <td>{{ $closure->deduction_year ?? '—' }}</td>
+                    <td>{{ $closure->last_contribution_year ?? '—' }}</td>
                 </tr>
             @empty
                 <tr>
