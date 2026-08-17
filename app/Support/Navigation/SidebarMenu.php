@@ -80,6 +80,8 @@ class SidebarMenu
         'entrysection.finalized_issued_account' => 'accounts.finalized',
         'entrysection.issue_account' => 'accounts.issue',
         'entrysection.close_account' => 'accounts.close',
+        'entrysection.assign_pran_against_accounts' => 'accounts.pran',
+
 
     ];
 

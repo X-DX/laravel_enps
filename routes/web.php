@@ -21,6 +21,7 @@ use App\Livewire\Accounts\Subscribers; // Entry Section: View All Accounts (M4, 
 use App\Livewire\Accounts\ShowSubscriber; // Entry Section: view one subscriber (M4, 4b)
 use App\Livewire\Accounts\IssueAccount; // Entry Section: Issue Account (M4, 4c)
 use App\Livewire\Accounts\CloseAccount; // Entry Section: Close Account (M4, slice 4f)
+use App\Livewire\Accounts\AssignPran; // Entry Section: Assign PRAN Against Accounts (M5, 5.1)
 
 
 // Root URL
@@ -137,5 +138,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/accounts/close', CloseAccount::class)
             ->middleware('can:entrysection.close_account')
             ->name('accounts.close');
+
+        Route::get('/accounts/pran', AssignPran::class)
+            ->middleware('can:entrysection.assign_pran_against_accounts')
+            ->name('accounts.pran');
     });
 });
