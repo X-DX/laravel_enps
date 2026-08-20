@@ -12,6 +12,14 @@ A visual/UX pass across the authenticated shell — outside the milestone sequen
 
 **Premium polish** — loads the **Sora** display font (`font-display`) alongside self-hosted Instrument Sans; a vibrant blurred-orb page backdrop; glass cards with hover-lift; gradient accents; and entrance animations (`animate-fade-in-up`, `animate-pop-in`, animated chart bars) added to `app.css`.
 
+## Round 2 — interaction polish
+
+- **Global progress bar** — a gradient bar at the top of the page during any Livewire request or `wire:navigate`, driven from `app.js` (hooks `Livewire.hook('request')` + the navigate events). Plus a `wire:loading` dim on the account table during search/pagination.
+- **Command palette (⌘K / Ctrl+K)** — a Livewire `CommandPalette` rendered once in the layout. Fuzzy-jump to any permitted screen *or* live-search accounts by name/number and open them. Full keyboard nav (↑ ↓ ↵, Esc), a header search button, mouse hover selection. **Gotcha:** `@livewire:navigated` collides with Blade's `@livewire` directive — use `x-on:livewire:navigated` instead.
+- **Live sidebar badges** — `SidebarMenu::badgeFor()` counts pending worklists (Pending Issue Accounts, Pending PRANs) and rolls them up to the sub-section, section, and collapsed icon-rail (a dot). Guarded for absent tables.
+- **Count-up numbers** — an Alpine `countUp()` helper animates the dashboard KPIs from 0 (honours `prefers-reduced-motion`; falls back to the server-rendered number so there's no flash of zero).
+- **Reusable `<x-empty-state>` and `<x-page-header>`** — polished empty states (icon + message) and a consistent header with breadcrumbs + an `actions` slot. Applied to the account list; ready to roll out to the rest.
+
 ## Notes / decisions
 
 - **Robustness:** `User::permissionKeys()` now guards on `Schema::hasTable('permissions')` (same defensive pattern `SidebarMenu` already used) so permission-gated views render even where the RBAC tables are absent — this is why the `@can` blocks on the dashboard don't break the password-change auth test.

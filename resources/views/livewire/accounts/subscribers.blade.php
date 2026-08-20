@@ -9,21 +9,19 @@
     @endphp
 
     {{-- Title --}}
-    <div class="mb-6 flex items-end justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">{{ $title }}</h1>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $subtitle }}</p>
-        </div>
-        @can('entrysection.issue_account')
-        <a href="{{ route('accounts.issue') }}" wire:navigate
-            class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-400 hover:to-sky-400">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-            </svg>
-            New Account
-        </a>
-        @endcan
-    </div>
+    <x-page-header :title="$title" :subtitle="$subtitle" :crumbs="['Entry Section' => null, 'Account Register' => null]">
+        <x-slot:actions>
+            @can('entrysection.issue_account')
+                <a href="{{ route('accounts.issue') }}" wire:navigate
+                    class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-400 hover:to-sky-400">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                    </svg>
+                    New Account
+                </a>
+            @endcan
+        </x-slot:actions>
+    </x-page-header>
 
     {{-- Toolbar: search · status (all only) · show · Excel · PDF · Finalize/Delete (pending only) --}}
     <div class="mb-4 flex flex-wrap items-center gap-3">
@@ -99,7 +97,7 @@
     </div>
 
     {{-- Table --}}
-    <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
+    <div wire:loading.class.delay="opacity-50" wire:target="search,status,perPage" class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm transition dark:border-white/10 dark:bg-white/[0.03]">
         <table class="min-w-full divide-y divide-slate-200 dark:divide-white/10">
             <thead>
                 <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
@@ -178,7 +176,7 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="11" class="px-4 py-10 text-center text-sm text-slate-400">No subscribers found.</td>
+                    <td colspan="11"><x-empty-state icon="users" title="No subscribers found" message="Try a different search or status filter." /></td>
                 </tr>
                 @endforelse
             </tbody>

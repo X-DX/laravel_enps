@@ -51,7 +51,12 @@
                                 <x-icon name="{{ $section['icon'] }}" class="h-5 w-5 shrink-0 text-slate-400 transition group-open/sec:text-indigo-500 dark:group-open/sec:text-indigo-400" />
                                 <span class="truncate uppercase tracking-wide text-xs">{{ $section['title'] }}</span>
                             </span>
-                            <x-icon name="chevron-right" class="h-4 w-4 shrink-0 text-slate-400 transition group-open/sec:rotate-90 group-open/sec:text-indigo-500 dark:group-open/sec:text-indigo-400" />
+                            <span class="flex shrink-0 items-center gap-1.5">
+                                @if ($section['badge'] ?? 0)
+                                    <span class="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 group-open/sec:bg-indigo-500 group-open/sec:text-white dark:bg-indigo-500/20 dark:text-indigo-300">{{ $section['badge'] }}</span>
+                                @endif
+                                <x-icon name="chevron-right" class="h-4 w-4 text-slate-400 transition group-open/sec:rotate-90 group-open/sec:text-indigo-500 dark:group-open/sec:text-indigo-400" />
+                            </span>
                         </summary>
 
                         <div class="mt-0.5 space-y-0.5 pb-1 pl-1.5">
@@ -62,7 +67,12 @@
                                             <x-icon name="{{ $sub['icon'] }}" class="h-4 w-4 shrink-0 opacity-70" />
                                             <span class="truncate">{{ $sub['title'] }}</span>
                                         </span>
-                                        <x-icon name="chevron-right" class="h-3.5 w-3.5 shrink-0 text-slate-400 transition group-open/sub:rotate-90 group-open/sub:text-indigo-500 dark:group-open/sub:text-indigo-400" />
+                                        <span class="flex shrink-0 items-center gap-1.5">
+                                            @if ($sub['badge'] ?? 0)
+                                                <span class="inline-flex min-w-[1.125rem] items-center justify-center rounded-full bg-indigo-100 px-1.5 py-0.5 text-[10px] font-bold text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300">{{ $sub['badge'] }}</span>
+                                            @endif
+                                            <x-icon name="chevron-right" class="h-3.5 w-3.5 text-slate-400 transition group-open/sub:rotate-90 group-open/sub:text-indigo-500 dark:group-open/sub:text-indigo-400" />
+                                        </span>
                                     </summary>
 
                                     <div class="ml-4 mt-0.5 space-y-0.5 border-l border-slate-200 pl-2 dark:border-white/10">
@@ -78,6 +88,13 @@
                                                     'text-slate-400 group-hover/item:text-indigo-500 dark:group-hover/item:text-indigo-400' => ! $item['active'],
                                                 ]) />
                                                 <span class="truncate">{{ $item['label'] }}</span>
+                                                @if ($item['badge'] ?? 0)
+                                                    <span @class([
+                                                        'ml-auto inline-flex min-w-[1.25rem] shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-bold',
+                                                        'bg-white/25 text-white' => $item['active'],
+                                                        'bg-indigo-100 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-300' => ! $item['active'],
+                                                    ])>{{ $item['badge'] }}</span>
+                                                @endif
                                             </a>
                                         @endforeach
                                     </div>
@@ -93,11 +110,12 @@
                 @foreach (app(\App\Support\Navigation\SidebarMenu::class)->forUser($user) as $section)
                     <button @click="collapsed = false" type="button" title="{{ $section['title'] }}"
                         @class([
-                            'flex w-full items-center justify-center rounded-xl p-2.5 transition',
+                            'relative flex w-full items-center justify-center rounded-xl p-2.5 transition',
                             'text-indigo-600 bg-indigo-50 dark:bg-indigo-500/15 dark:text-indigo-300' => $section['open'],
                             'text-slate-500 hover:bg-slate-100 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-indigo-300' => ! $section['open'],
                         ])>
                         <x-icon name="{{ $section['icon'] }}" class="h-5 w-5" />
+                        @if ($section['badge'] ?? 0)<span class="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-950"></span>@endif
                     </button>
                 @endforeach
             </div>

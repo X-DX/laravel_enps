@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full">
+
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -10,28 +11,41 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    <style>[x-cloak]{display:none!important}</style>
+    <style>
+        [x-cloak] {
+            display: none !important
+        }
+    </style>
 </head>
+
 <body class="min-h-full bg-slate-100 font-sans text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100">
-    <div
-        x-data="{
-            collapsed: JSON.parse(localStorage.getItem('sb.collapsed') ?? 'false'),
-            mobileOpen: false,
-        }"
-        x-init="$watch('collapsed', v => localStorage.setItem('sb.collapsed', JSON.stringify(v)))"
-        class="relative flex min-h-screen">
+    {{-- global navigation / request progress bar (driven by resources/js/app.js) --}}
+    <div id="app-progress" class="pointer-events-none fixed left-0 top-0 z-[100] h-[3px] w-0 bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-500 opacity-0 shadow-[0_0_10px_rgba(99,102,241,.6)]"></div>
+
+    <div x-data="{
+        collapsed: JSON.parse(localStorage.getItem('sb.collapsed') ?? 'false'),
+        mobileOpen: false,
+    }" x-init="$watch('collapsed', v => localStorage.setItem('sb.collapsed', JSON.stringify(v)))" class="relative flex min-h-screen">
 
         {{-- vibrant page backdrop --}}
         <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-            <div class="absolute -top-40 -right-32 h-96 w-96 rounded-full bg-indigo-400/20 blur-3xl dark:bg-indigo-600/10"></div>
-            <div class="absolute top-1/3 -left-40 h-[28rem] w-[28rem] rounded-full bg-sky-400/20 blur-3xl dark:bg-sky-600/10"></div>
-            <div class="absolute -bottom-40 right-1/4 h-96 w-96 rounded-full bg-violet-400/20 blur-3xl dark:bg-violet-600/10"></div>
+            <div
+                class="absolute -top-40 -right-32 h-96 w-96 rounded-full bg-indigo-400/20 blur-3xl dark:bg-indigo-600/10">
+            </div>
+            <div
+                class="absolute top-1/3 -left-40 h-[28rem] w-[28rem] rounded-full bg-sky-400/20 blur-3xl dark:bg-sky-600/10">
+            </div>
+            <div
+                class="absolute -bottom-40 right-1/4 h-96 w-96 rounded-full bg-violet-400/20 blur-3xl dark:bg-violet-600/10">
+            </div>
         </div>
 
         <x-app.sidebar />
+        @auth <livewire:command-palette /> @endauth
 
         <div class="flex min-w-0 flex-1 flex-col">
-            <header class="sticky top-0 z-30 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
+            <header
+                class="sticky top-0 z-30 border-b border-slate-200/70 bg-white/70 backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
                 <div class="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
                     <div class="flex items-center gap-3">
                         <button @click="mobileOpen = true" type="button" aria-label="Open menu"
@@ -39,20 +53,32 @@
                             <x-icon name="bars-3" class="h-6 w-6" />
                         </button>
                         <a href="{{ route('home') }}" class="flex items-center gap-2 lg:hidden">
-                            <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-sky-500 text-xs font-bold text-white">eN</span>
+                            <span
+                                class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-sky-500 text-xs font-bold text-white">eN</span>
                             <span class="font-display font-bold">eNPS</span>
                         </a>
+
+                        @auth
+                            <button @click="$dispatch('command-palette-open')" type="button"
+                                class="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white/60 px-3 py-1.5 text-sm text-slate-400 transition hover:border-indigo-300 hover:text-slate-600 sm:flex dark:border-white/10 dark:bg-white/5 dark:hover:border-indigo-500/30 dark:hover:text-slate-300">
+                                <x-icon name="magnifying-glass" class="h-4 w-4" />
+                                <span>Search…</span>
+                                <kbd class="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium dark:border-white/10 dark:bg-white/10">⌘K</kbd>
+                            </button>
+                        @endauth
                     </div>
 
                     <div class="flex items-center gap-2 sm:gap-3">
-                        <x-theme.toggle />
+
 
                         @auth
                             <div class="hidden text-right sm:block">
-                                <p class="text-sm font-semibold text-slate-900 dark:text-white">{{ auth()->user()->username }}</p>
+                                <p class="text-sm font-semibold text-slate-900 dark:text-white">
+                                    {{ auth()->user()->username }}</p>
                                 <p class="text-xs text-slate-500 dark:text-slate-400">{{ auth()->user()->user_id }}</p>
                             </div>
-                            <span class="hidden h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-semibold text-white shadow-md shadow-indigo-500/30 sm:flex">
+                            <span
+                                class="hidden h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-sm font-semibold text-white shadow-md shadow-indigo-500/30 sm:flex">
                                 {{ strtoupper(substr(auth()->user()->username, 0, 1)) }}
                             </span>
                             <form method="POST" action="{{ route('logout') }}">
@@ -63,6 +89,7 @@
                                 </button>
                             </form>
                         @endauth
+                        <x-theme.toggle />
                     </div>
                 </div>
             </header>
@@ -75,4 +102,5 @@
         </div>
     </div>
 </body>
+
 </html>

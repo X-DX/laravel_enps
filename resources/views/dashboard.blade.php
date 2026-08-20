@@ -51,7 +51,7 @@
                 <div class="relative flex items-start justify-between">
                     <div>
                         <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ $c['label'] }}</p>
-                        <p class="mt-2 font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-white">{{ number_format($c['value']) }}</p>
+                        <p class="mt-2 font-display text-3xl font-bold tracking-tight text-slate-900 dark:text-white" x-data="countUp({{ $c['value'] }})" x-text="display">{{ number_format($c['value']) }}</p>
                     </div>
                     <span class="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br {{ $c['grad'] }} text-white shadow-lg">
                         <x-icon name="{{ $c['icon'] }}" class="h-6 w-6" />
@@ -148,7 +148,7 @@
             @foreach ($masters as $m)
                 <div class="flex flex-col items-center justify-center rounded-2xl border border-slate-200/70 bg-white/80 p-5 text-center shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/[0.04]">
                     <span class="flex h-10 w-10 items-center justify-center rounded-xl {{ $m['color'] }}"><x-icon name="{{ $m['icon'] }}" class="h-5 w-5" /></span>
-                    <p class="mt-3 font-display text-2xl font-bold text-slate-900 dark:text-white">{{ number_format($m['value']) }}</p>
+                    <p class="mt-3 font-display text-2xl font-bold text-slate-900 dark:text-white" x-data="countUp({{ $m['value'] }})" x-text="display">{{ number_format($m['value']) }}</p>
                     <p class="text-xs font-medium text-slate-500 dark:text-slate-400">{{ $m['label'] }}</p>
                 </div>
             @endforeach

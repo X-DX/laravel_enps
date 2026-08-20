@@ -190,8 +190,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-4 py-10 text-center text-sm text-slate-400">No pending PRANs.
-                            </td>
+                            <td colspan="9"><x-empty-state icon="identification" title="No pending PRANs" message="Assign a PRAN above — drafts appear here to finalize." /></td>
                         </tr>
                     @endforelse
                 </tbody>

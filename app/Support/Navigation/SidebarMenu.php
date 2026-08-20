@@ -166,6 +166,7 @@ class SidebarMenu
             $sections[$sectionTitle]['subs'][$subTitle]['items'][] = [
                 'label' => trim((string) $r->menu_label),
                 'icon' => $this->iconFor($r->menu_label, $r->permission_key),
+                'badge' => $this->badgeFor($r->permission_key),
                 'url' => $hasRoute ? route($routeName) : null,
                 'active' => $hasRoute && $this->isActive($routeName),
                 'permission' => $r->permission_key,
@@ -185,6 +186,7 @@ class SidebarMenu
                             'title' => $sub['title'],
                             'icon' => $sub['icon'] ?? 'folder',
                             'open' => $items->contains(fn($i) => $i['active']),
+                            'badge' => $items->sum(fn($i) => $i['badge'] ?? 0) ?: null,
                             'items' => $items,
                         ];
                     })->values();
@@ -193,6 +195,7 @@ class SidebarMenu
                     'title' => $section['title'],
                     'icon' => $section['icon'] ?? 'folder',
                     'open' => $subs->contains(fn($s) => $s['open']),
+                    'badge' => $subs->sum(fn($s) => $s['badge'] ?? 0) ?: null,
                     'subs' => $subs,
                 ];
             })
@@ -212,6 +215,20 @@ class SidebarMenu
         }
 
         return $current === $routeName || (self::ACTIVE_ALIASES[$current] ?? null) === $routeName;
+    }
+
+    /** A live count badge for pending worklists. Null = no badge. Guarded for absent tables. */
+    private function badgeFor(string $key): ?int
+    {
+        $count = match ($key) {
+            'entrysection.pending_issue_accounts' => Schema::hasTable('allotment_accnt_no')
+                ? DB::table('allotment_accnt_no')->where('save_flag', 'T')->count() : 0,
+            'entrysection.assign_pran_against_accounts' => Schema::hasTable('pran_no')
+                ? DB::table('pran_no')->where('save_flag', 'T')->count() : 0,
+            default => 0,
+        };
+
+        return $count > 0 ? $count : null;
     }
 
     /** Guess a sensible icon from a menu label / permission key (keyword based). */
