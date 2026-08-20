@@ -95,12 +95,16 @@ class SidebarMenu
     ];
 
     /**
-     * Permission keys whose legacy menu item should NOT appear in the sidebar — the feature
-     * lives elsewhere. `edit_issued_account` is a per-row action on the Pending / Finalized
-     * screens, not a standalone menu item.
+     * Permission keys whose legacy menu item should NOT appear in the sidebar.
+     *  - `edit_issued_account` is a per-row action on the Pending / Finalized screens.
+     *  - the three Letter items are intentionally NOT part of the new system (business decision,
+     *    2026-08-16). The permission rows are kept in case Letters are revived later.
      */
     private const HIDDEN = [
         'entrysection.edit_issued_account',
+        'entrysection.generate_account_letter',
+        'entrysection.re_generate_account_letter',
+        'entrysection.generate_pran_letter',
     ];
 
     /**
