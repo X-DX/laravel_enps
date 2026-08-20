@@ -10,6 +10,24 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Sora', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+
+    /* Entrance animations (Tailwind v4 turns --animate-* into animate-* utilities). */
+    --animate-fade-in-up: fade-in-up 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    --animate-pop-in: pop-in 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes pop-in {
+    from { opacity: 0; transform: scale(0.96) translateY(10px); }
+    to { opacity: 1; transform: none; }
+}
+@keyframes count-bar {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
 }
 
 /* ------------------------------------------------------------------ */

@@ -22,6 +22,7 @@ use App\Livewire\Accounts\ShowSubscriber; // Entry Section: view one subscriber 
 use App\Livewire\Accounts\IssueAccount; // Entry Section: Issue Account (M4, 4c)
 use App\Livewire\Accounts\CloseAccount; // Entry Section: Close Account (M4, slice 4f)
 use App\Livewire\Accounts\AssignPran; // Entry Section: Assign PRAN Against Accounts (M5, 5.1)
+use App\Livewire\Dashboard; // Analytics dashboard
 
 
 // Root URL
@@ -54,7 +55,7 @@ Route::middleware('auth')->group(function () {
 
     // Everything below requires a current (non-expired) password.
     Route::middleware(EnsurePasswordIsCurrent::class)->group(function () {
-        Route::view('/dashboard', 'dashboard')->name('dashboard');
+        Route::get('/dashboard', Dashboard::class)->name('dashboard');
 
         // Master Data — District Master (M3, slice 3a).
         Route::get('/master/districts', Districts::class)

@@ -107,6 +107,18 @@ class SidebarMenu
         'entrysection.generate_pran_letter',
     ];
 
+    /** Top-level section (menu code) → icon name (see resources/views/components/icon.blade.php). */
+    private const SECTION_ICONS = [
+        'adminsection' => 'shield-check',
+        'entrysection' => 'pencil-square',
+        'queriessection' => 'magnifying-glass',
+        'reportsection' => 'chart-bar',
+        'export' => 'arrow-up-tray',
+        'reexport' => 'arrow-path',
+        'accountinterest' => 'banknotes',
+        'closebalance' => 'banknotes',
+    ];
+
     /**
      * @return Collection<int, array{title:string, open:bool, subs:Collection}>
      */
@@ -146,11 +158,14 @@ class SidebarMenu
             $hasRoute = $routeName !== null && Route::has($routeName);
 
             $sections[$sectionTitle]['title'] = $sectionTitle;
+            $sections[$sectionTitle]['icon'] ??= self::SECTION_ICONS[$menu] ?? 'folder';
             $sections[$sectionTitle]['order'] = min($sections[$sectionTitle]['order'] ?? PHP_INT_MAX, $r->menu_id);
             $sections[$sectionTitle]['subs'][$subTitle]['title'] = $subTitle;
+            $sections[$sectionTitle]['subs'][$subTitle]['icon'] ??= $this->iconFor($subTitle);
             $sections[$sectionTitle]['subs'][$subTitle]['order'] = min($sections[$sectionTitle]['subs'][$subTitle]['order'] ?? PHP_INT_MAX, $r->menu_id);
             $sections[$sectionTitle]['subs'][$subTitle]['items'][] = [
                 'label' => trim((string) $r->menu_label),
+                'icon' => $this->iconFor($r->menu_label, $r->permission_key),
                 'url' => $hasRoute ? route($routeName) : null,
                 'active' => $hasRoute && $this->isActive($routeName),
                 'permission' => $r->permission_key,
@@ -168,6 +183,7 @@ class SidebarMenu
 
                         return [
                             'title' => $sub['title'],
+                            'icon' => $sub['icon'] ?? 'folder',
                             'open' => $items->contains(fn($i) => $i['active']),
                             'items' => $items,
                         ];
@@ -175,6 +191,7 @@ class SidebarMenu
 
                 return [
                     'title' => $section['title'],
+                    'icon' => $section['icon'] ?? 'folder',
                     'open' => $subs->contains(fn($s) => $s['open']),
                     'subs' => $subs,
                 ];
@@ -195,6 +212,39 @@ class SidebarMenu
         }
 
         return $current === $routeName || (self::ACTIVE_ALIASES[$current] ?? null) === $routeName;
+    }
+
+    /** Guess a sensible icon from a menu label / permission key (keyword based). */
+    private function iconFor(string $text, string $key = ''): string
+    {
+        $h = strtolower($key . ' ' . $text);
+
+        return match (true) {
+            str_contains($h, 'district') => 'map-pin',
+            str_contains($h, 'treasury') => 'building-library',
+            str_contains($h, 'ddo') => 'building-office',
+            str_contains($h, 'bank') => 'banknotes',
+            str_contains($h, 'designation') => 'identification',
+            str_contains($h, 'location') => 'map-pin',
+            str_contains($h, 'permission') || str_contains($h, 'user') => 'key',
+            str_contains($h, 'interest') || str_contains($h, 'share') || str_contains($h, 'rate') => 'percent',
+            str_contains($h, 'retirement') || str_contains($h, 'year') => 'calendar',
+            str_contains($h, 'pran') => 'identification',
+            str_contains($h, 'close') => 'x-circle',
+            str_contains($h, 'finaliz') => 'check-circle',
+            str_contains($h, 'pending') => 'clock',
+            str_contains($h, 'issue') => 'user-plus',
+            str_contains($h, 'missing') => 'clipboard',
+            str_contains($h, 'letter') => 'document-text',
+            str_contains($h, 'report') || str_contains($h, 'print') => 'chart-bar',
+            str_contains($h, 'export') => 'arrow-up-tray',
+            str_contains($h, 'view') || str_contains($h, 'register') => 'list-bullet',
+            str_contains($h, 'master') => 'circle-stack',
+            str_contains($h, 'employee') || str_contains($h, 'subscriber') => 'users',
+            str_contains($h, 'contribution') || str_contains($h, 'balance') => 'banknotes',
+            str_contains($h, 'account') => 'identification',
+            default => 'document-text',
+        };
     }
 
     /**

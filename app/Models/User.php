@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable
 {
@@ -155,6 +156,13 @@ class User extends Authenticatable
     {
         if ($this->permissionKeyCache !== null) {
             return $this->permissionKeyCache;
+        }
+
+        // Defensive: some pages render where the RBAC tables aren't present (e.g. unrelated
+        // auth tests). Treat that as "no permissions" rather than erroring — admins still
+        // bypass via isAdmin() before this method is ever reached.
+        if (! Schema::hasTable('permissions')) {
+            return $this->permissionKeyCache = collect();
         }
 
         $direct = $this->directPermissions()->pluck('key');

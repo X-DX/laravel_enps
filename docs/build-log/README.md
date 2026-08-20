@@ -34,6 +34,7 @@ This is the "why we did it this way" memory of the rebuild — read alongside
 | Item | File | Status |
 |------|------|--------|
 | Landing page (`/`) | [landing-page.md](landing-page.md) | ✅ public entry page with dark mode, parallax, custom cursor |
+| UI refresh (icons · sidebar · dashboard) | [ui-refresh.md](ui-refresh.md) | ✅ icon system, collapsible icon-rail sidebar + mobile drawer, Livewire analytics dashboard, premium fonts/animations |
 
 ## Conventions
 
