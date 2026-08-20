@@ -1,4 +1,4 @@
-<div class="mx-auto max-w-4xl">
+<div class="mx-auto max-w-7xl">
     @php
         $input =
             'block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white';
@@ -8,12 +8,17 @@
         $head = 'mb-4 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400';
     @endphp
 
+    <x-breadcrumbs class="mb-4" :crumbs="['Entry Section' => null, 'Account Register' => null]" current="Assign PRAN Against Accounts" />
+
     <div class="mb-6">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Assign PRAN Against Accounts
         </h1>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Find a finalized account and record its PRAN. Saved as
             a draft — finalize it in the list below.</p>
     </div>
+
+    {{-- form (search + add/update) kept comfortably narrow; the pending table below is full-width --}}
+    <div class="mx-auto max-w-4xl">
 
     {{-- ① Search account --}}
     <div class="{{ $card }}">
@@ -116,9 +121,9 @@
             </div>
         </div>
     @endif
+    </div>{{-- /form wrapper --}}
 
-    {{-- ③ Pending PRANs list — coming in slice 5.1b --}}
-    {{-- ③ Pending PRANs for finalize --}}
+    {{-- ③ Pending PRANs for finalize (full width) --}}
     <div class="mt-8">
         <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
             <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Pending

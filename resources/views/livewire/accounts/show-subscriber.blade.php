@@ -1,4 +1,6 @@
 <div class="mx-auto max-w-4xl">
+    <x-breadcrumbs class="mb-4" :crumbs="['Entry Section' => null, 'Account Register' => null, 'View All Accounts' => route('accounts.index')]" :current="$subscriber->name" />
+
     {{-- Back to the list --}}
     <a href="{{ route('accounts.index') }}" wire:navigate
         class="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300">

@@ -1,6 +1,8 @@
 <div class="mx-auto max-w-4xl">
     @php $backRoute = $editingId ? ($isFinalized ? 'accounts.finalized' : 'accounts.pending') : 'accounts.index'; @endphp
 
+    <x-breadcrumbs class="mb-4" :crumbs="['Entry Section' => null, 'Account Register' => null]" :current="$editingId ? 'Edit Account' : 'Issue Account'" />
+
     {{-- Back to the list --}}
     <a href="{{ route($backRoute) }}" wire:navigate
         class="inline-flex items-center gap-1 text-sm font-medium text-indigo-600 hover:underline dark:text-indigo-300">

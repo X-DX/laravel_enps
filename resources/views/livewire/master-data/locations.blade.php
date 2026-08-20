@@ -1,5 +1,7 @@
 <div class="mx-auto max-w-4xl">
     {{-- Header --}}
+    <x-breadcrumbs class="mb-4" :crumbs="['Admin Section' => null, 'Master Entry' => null]" current="Location Master" />
+
     <div class="mb-6 flex items-end justify-between gap-4">
         <div>
             <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Location Master</h1>

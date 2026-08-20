@@ -1,5 +1,7 @@
 <div class="mx-auto max-w-5xl">
     {{-- Title --}}
+    <x-breadcrumbs class="mb-4" :crumbs="['Entry Section' => null, 'Account Register' => null]" current="Close Account" />
+
     <div class="mb-6">
         <h1 class="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">Close Account</h1>
         <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Pick a department and account, add the closure

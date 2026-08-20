@@ -18,7 +18,8 @@ A visual/UX pass across the authenticated shell — outside the milestone sequen
 - **Command palette (⌘K / Ctrl+K)** — a Livewire `CommandPalette` rendered once in the layout. Fuzzy-jump to any permitted screen *or* live-search accounts by name/number and open them. Full keyboard nav (↑ ↓ ↵, Esc), a header search button, mouse hover selection. **Gotcha:** `@livewire:navigated` collides with Blade's `@livewire` directive — use `x-on:livewire:navigated` instead.
 - **Live sidebar badges** — `SidebarMenu::badgeFor()` counts pending worklists (Pending Issue Accounts, Pending PRANs) and rolls them up to the sub-section, section, and collapsed icon-rail (a dot). Guarded for absent tables.
 - **Count-up numbers** — an Alpine `countUp()` helper animates the dashboard KPIs from 0 (honours `prefers-reduced-motion`; falls back to the server-rendered number so there's no flash of zero).
-- **Reusable `<x-empty-state>` and `<x-page-header>`** — polished empty states (icon + message) and a consistent header with breadcrumbs + an `actions` slot. Applied to the account list; ready to roll out to the rest.
+- **Reusable `<x-empty-state>`, `<x-page-header>`, `<x-breadcrumbs>`** — polished empty states (icon + message), a consistent header with an `actions` slot, and a shared breadcrumb trail (Home › Section › Sub-section › Page). **Breadcrumbs are now on every screen** (master data, settings, admin, and all account/PRAN pages); the page-header renders them via the same `<x-breadcrumbs>`.
+- **Assign PRAN width** — the page is `max-w-7xl` with the form kept in an inner `max-w-4xl`, so the wide pending-PRANs table uses the full width and no longer needs side-scrolling.
 
 ## Notes / decisions
 
