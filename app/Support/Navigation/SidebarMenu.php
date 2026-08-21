@@ -81,6 +81,7 @@ class SidebarMenu
         'entrysection.issue_account' => 'accounts.issue',
         'entrysection.close_account' => 'accounts.close',
         'entrysection.assign_pran_against_accounts' => 'accounts.pran',
+        'entrysection.migration_to_ups' => 'accounts.ups-migration',
 
 
     ];
@@ -246,6 +247,7 @@ class SidebarMenu
             str_contains($h, 'permission') || str_contains($h, 'user') => 'key',
             str_contains($h, 'interest') || str_contains($h, 'share') || str_contains($h, 'rate') => 'percent',
             str_contains($h, 'retirement') || str_contains($h, 'year') => 'calendar',
+            str_contains($h, 'migrat') => 'arrows-right-left',
             str_contains($h, 'pran') => 'identification',
             str_contains($h, 'close') => 'x-circle',
             str_contains($h, 'finaliz') => 'check-circle',

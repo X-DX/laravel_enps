@@ -22,6 +22,7 @@ use App\Livewire\Accounts\ShowSubscriber; // Entry Section: view one subscriber 
 use App\Livewire\Accounts\IssueAccount; // Entry Section: Issue Account (M4, 4c)
 use App\Livewire\Accounts\CloseAccount; // Entry Section: Close Account (M4, slice 4f)
 use App\Livewire\Accounts\AssignPran; // Entry Section: Assign PRAN Against Accounts (M5, 5.1)
+use App\Livewire\Accounts\MigrateToUps; // Entry Section: Migration to UPS (menu 161)
 use App\Livewire\Dashboard; // Analytics dashboard
 
 
@@ -143,5 +144,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/accounts/pran', AssignPran::class)
             ->middleware('can:entrysection.assign_pran_against_accounts')
             ->name('accounts.pran');
+
+        // Entry Section — Migration to UPS: move a finalized NPS account to UPS (menu 161).
+        Route::get('/accounts/ups-migration', MigrateToUps::class)
+            ->middleware('can:entrysection.migration_to_ups')
+            ->name('accounts.ups-migration');
     });
 });

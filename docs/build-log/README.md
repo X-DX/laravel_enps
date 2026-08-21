@@ -34,7 +34,8 @@ This is the "why we did it this way" memory of the rebuild — read alongside
 | Item | File | Status |
 |------|------|--------|
 | Landing page (`/`) | [landing-page.md](landing-page.md) | ✅ public entry page with dark mode, parallax, custom cursor |
-| UI refresh (icons · sidebar · dashboard) | [ui-refresh.md](ui-refresh.md) | ✅ icon system, collapsible icon-rail sidebar + mobile drawer, Livewire analytics dashboard, premium fonts/animations |
+| UI refresh (icons · sidebar · dashboard) | [ui-refresh.md](ui-refresh.md) | ✅ icon system, collapsible icon-rail sidebar + mobile drawer, Livewire analytics dashboard, premium fonts/animations; then command palette, progress bar, live badges, breadcrumbs everywhere |
+| Migration to UPS (menu 161) | [migrate-to-ups.md](migrate-to-ups.md) | ✅ restored missing feature — data migration adds the menu item + permission; Livewire search → migrate NPS→UPS (guarded, transactional update + `ups_migration` log) — 164 tests |
 
 ## Conventions
 
