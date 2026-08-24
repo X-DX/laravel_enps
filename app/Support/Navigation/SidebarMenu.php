@@ -83,6 +83,11 @@ class SidebarMenu
         'entrysection.assign_pran_against_accounts' => 'accounts.pran',
         'entrysection.migration_to_ups' => 'accounts.ups-migration',
 
+        'entrysection.entry_first_register' => 'first-entries.entry',
+        'entrysection.view_all_first_entries' => 'first-entries.index',
+        'entrysection.pending_first_entry' => 'first-entries.pending',
+        'entrysection.finalized_first_entry' => 'first-entries.finalized',
+
 
     ];
 
@@ -226,6 +231,8 @@ class SidebarMenu
                 ? DB::table('allotment_accnt_no')->where('save_flag', 'T')->count() : 0,
             'entrysection.assign_pran_against_accounts' => Schema::hasTable('pran_no')
                 ? DB::table('pran_no')->where('save_flag', 'T')->count() : 0,
+            'entrysection.pending_first_entry' => Schema::hasTable('first_receipt')
+                ? DB::table('first_receipt')->where('flag', 'T')->count() : 0,
             default => 0,
         };
 
@@ -253,6 +260,7 @@ class SidebarMenu
             str_contains($h, 'finaliz') => 'check-circle',
             str_contains($h, 'pending') => 'clock',
             str_contains($h, 'issue') => 'user-plus',
+            str_contains($h, 'entry ') => 'pencil-square',
             str_contains($h, 'missing') => 'clipboard',
             str_contains($h, 'letter') => 'document-text',
             str_contains($h, 'report') || str_contains($h, 'print') => 'chart-bar',

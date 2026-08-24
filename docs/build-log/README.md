@@ -21,7 +21,7 @@ This is the "why we did it this way" memory of the rebuild — read alongside
 | M3 change — DDO Master: real DDO Code | [M3-ddo-code-restructure.md](M3-ddo-code-restructure.md) | ✅ rename serial `ddo_code`→`ddo_sl`; new 7-digit `ddo_code` unique per treasury; hand-typed one concept at a time (104 tests) |
 | M4 — Subscriber & Account | [4a list](M4-4a-subscriber-list.md) · [4b detail](M4-4b-subscriber-detail.md) · [4c issue](M4-4c-issue-account.md) · [4d finalize](M4-4d-finalize-account.md) · [4e register screens](M4-4e-account-register-screens.md) · [4f close](M4-4f-close-account.md) · [4g edit](M4-4g-edit-account.md) | ✅ complete (4a–4g: list · detail · issue · finalize · 3 register screens · close (dedicated `account_closure` register + guarded one-txn close) · per-row edit reusing the issue form with finalized-field freeze — 146 tests) |
 | M5 — PRAN | [5.1 assign PRAN](M5-5.1-assign-pran.md) | ✅ complete (5.1 Assign PRAN: search account → add/update PRAN draft (12-digit, confirm-match, globally unique) → pending list with select-all + Finalize/Delete/Excel/PDF — 159 tests). **Part 2 (Letters) dropped** — business decision 2026-08-16; the 3 legacy letter menu items are hidden (permissions kept for a possible future revival) |
-| M6 — Money Intake | _pending_ | ⬜ |
+| M6 — First Register | [M6 first register](M6-first-register.md) | 🟡 in progress (6.1a: entry form with location→DDO cascade + duplicate "save anyway" guard, and View All / Pending / Finalized lists with status/search/Excel/PDF — 171 tests) · 6.1b Pending actions (finalize/delete/edit) next |
 | M7 — Contributions | _pending_ | ⬜ |
 | M8 — Settlement | _pending_ | ⬜ |
 | M9 — Reports & Exports | _pending_ | ⬜ |

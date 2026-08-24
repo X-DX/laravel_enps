@@ -23,6 +23,8 @@ use App\Livewire\Accounts\IssueAccount; // Entry Section: Issue Account (M4, 4c)
 use App\Livewire\Accounts\CloseAccount; // Entry Section: Close Account (M4, slice 4f)
 use App\Livewire\Accounts\AssignPran; // Entry Section: Assign PRAN Against Accounts (M5, 5.1)
 use App\Livewire\Accounts\MigrateToUps; // Entry Section: Migration to UPS (menu 161)
+use App\Livewire\FirstRegister\FirstEntries; // Entry Section: First Register lists (menu 172-174)
+use App\Livewire\FirstRegister\FirstEntry; // Entry Section: Entry First Register (menu 171)
 use App\Livewire\Dashboard; // Analytics dashboard
 
 
@@ -149,5 +151,24 @@ Route::middleware('auth')->group(function () {
         Route::get('/accounts/ups-migration', MigrateToUps::class)
             ->middleware('can:entrysection.migration_to_ups')
             ->name('accounts.ups-migration');
+
+        // Entry Section — First Register (menu 171–174). One list component, three screens.
+        Route::get('/first-register', FirstEntries::class)
+            ->middleware('can:entrysection.view_all_first_entries')
+            ->name('first-entries.index');
+
+        Route::get('/first-register/pending', FirstEntries::class)
+            ->middleware('can:entrysection.pending_first_entry')
+            ->defaults('mode', 'pending')
+            ->name('first-entries.pending');
+
+        Route::get('/first-register/finalized', FirstEntries::class)
+            ->middleware('can:entrysection.finalized_first_entry')
+            ->defaults('mode', 'finalized')
+            ->name('first-entries.finalized');
+
+        Route::get('/first-register/entry', FirstEntry::class)
+            ->middleware('can:entrysection.entry_first_register')
+            ->name('first-entries.entry');
     });
 });
