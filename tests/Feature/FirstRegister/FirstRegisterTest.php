@@ -22,7 +22,7 @@ class FirstRegisterTest extends TestCase
     {
         parent::setUp();
 
-        foreach (['user_permission', 'role_permission', 'permissions', 'roles', 'user_account', 'first_receipt', 'purpose_master_codes', 'bank_master', 'loc_master', 'ddo_master'] as $t) {
+        foreach (['user_permission', 'role_permission', 'permissions', 'roles', 'user_account', 'first_receipt', 'purpose_master_codes', 'bank_master', 'loc_master', 'treasury_master', 'ddo_master'] as $t) {
             Schema::dropIfExists($t);
         }
 
@@ -74,6 +74,11 @@ class FirstRegisterTest extends TestCase
             $t->string('loc_name')->nullable();
             $t->bigInteger('dist_code')->nullable();
         });
+        Schema::create('treasury_master', function (Blueprint $t) {
+            $t->string('treasury_code', 10)->primary();
+            $t->string('treasury_name', 150);
+            $t->bigInteger('dist_code')->nullable();
+        });
         Schema::create('ddo_master', function (Blueprint $t) {
             $t->bigIncrements('ddo_sl');
             $t->string('ddo_name', 150)->nullable();
@@ -108,7 +113,8 @@ class FirstRegisterTest extends TestCase
         DB::table('purpose_master_codes')->insert(['pid' => 'D01', 'purpose' => 'DEDUCTION FOR JAN']);
         DB::table('bank_master')->insert(['bank_code' => 10, 'bank_name' => 'SBI', 'branch_name' => 'Main']);
         DB::table('loc_master')->insert(['loc_code' => 1, 'loc_name' => 'Itanagar']);
-        DB::table('ddo_master')->insert(['ddo_sl' => 2, 'ddo_name' => 'DDO Alpha', 'loc_code' => 1]);
+        DB::table('treasury_master')->insert(['treasury_code' => '01', 'treasury_name' => 'Itanagar Treasury']);
+        DB::table('ddo_master')->insert(['ddo_sl' => 2, 'ddo_name' => 'DDO Alpha', 'loc_code' => 1, 'treasury_code' => '01']);
     }
 
     private function makeUser(string $userId, string $roleFlag): User
@@ -128,7 +134,7 @@ class FirstRegisterTest extends TestCase
 
     private function validForm(\Livewire\Features\SupportTesting\Testable $c): \Livewire\Features\SupportTesting\Testable
     {
-        return $c->set('locCode', '1')
+        return $c->set('treasuryCode', '01')
             ->set('ddocode', '2')
             ->set('orderNo', 'ORD/2024/001')
             ->set('orderDate', '2024-01-01')
@@ -168,18 +174,28 @@ class FirstRegisterTest extends TestCase
         $this->actingAs($this->makeUser('staff', 'S'))->get('/first-register/entry')->assertForbidden();
     }
 
-    public function test_choosing_a_location_shows_only_its_ddos(): void
+    public function test_choosing_a_treasury_shows_only_its_ddos(): void
     {
-        DB::table('ddo_master')->insert(['ddo_sl' => 3, 'ddo_name' => 'DDO Beta', 'loc_code' => 2]);
+        DB::table('ddo_master')->insert(['ddo_sl' => 3, 'ddo_name' => 'DDO Beta', 'treasury_code' => '02']);
 
         Livewire::actingAs($this->makeUser('admin', 'A'))
             ->test(FirstEntry::class)
-            ->set('locCode', '1')
-            ->assertSee('DDO Alpha')     // under location 1
-            ->assertDontSee('DDO Beta')  // under location 2
+            ->set('treasuryCode', '01')
+            ->assertSee('DDO Alpha')     // under treasury 01
+            ->assertDontSee('DDO Beta')  // under treasury 02
             ->set('ddocode', '2')
-            ->set('locCode', '2')        // switching location...
+            ->set('treasuryCode', '02')  // switching treasury...
             ->assertSet('ddocode', '');  // ...clears the stale DDO
+    }
+
+    public function test_ticking_draft_auto_selects_double_contribution(): void
+    {
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(FirstEntry::class)
+            ->set('isDraft', true)
+            ->assertSet('contributionType', 'DC')   // draft → double
+            ->set('isDraft', false)
+            ->assertSet('contributionType', '');    // receipt → cleared
     }
 
     public function test_it_saves_an_entry_as_pending_with_system_fields(): void

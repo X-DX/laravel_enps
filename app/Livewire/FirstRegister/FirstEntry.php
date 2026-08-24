@@ -5,8 +5,8 @@ namespace App\Livewire\FirstRegister;
 use App\Models\Bank;
 use App\Models\Ddo;
 use App\Models\FirstReceipt;
-use App\Models\Location;
 use App\Models\Purpose;
+use App\Models\Treasury;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -21,7 +21,7 @@ class FirstEntry extends Component
 {
     private const ABILITY = 'entrysection.entry_first_register';
 
-    public string $locCode = '';          // helper — filters the DDO list; not stored
+    public string $treasuryCode = '';     // helper — filters the DDO list; not stored
     public string $ddocode = '';
     public string $orderNo = '';
     public string $orderDate = '';
@@ -42,16 +42,22 @@ class FirstEntry extends Component
         $this->authorize(self::ABILITY);
     }
 
-    /** Office Location changed → clear the (now-stale) DDO; its list refills below. */
-    public function updatedLocCode(): void
+    /** Treasury Location changed → clear the (now-stale) DDO; its list refills below. */
+    public function updatedTreasuryCode(): void
     {
         $this->ddocode = '';
+    }
+
+    /** A Draft is a double contribution — auto-select it (and clear it back for a Receipt). */
+    public function updatedIsDraft(): void
+    {
+        $this->contributionType = $this->isDraft ? 'DC' : '';
     }
 
     protected function rules(): array
     {
         return [
-            'locCode' => ['required'],
+            'treasuryCode' => ['required'],
             'ddocode' => ['required', 'integer', 'exists:ddo_master,ddo_sl'],
             'orderNo' => ['required', 'string'],
             'orderDate' => ['required', 'date'],
@@ -68,7 +74,7 @@ class FirstEntry extends Component
     protected function messages(): array
     {
         return [
-            'locCode.required' => 'Select an office location.',
+            'treasuryCode.required' => 'Select a treasury location.',
             'ddocode.required' => 'Select a DDO.',
             'contributionType.required' => 'Select the contribution type.',
             'drawBankCode.required' => 'Select the draw bank.',
@@ -122,11 +128,11 @@ class FirstEntry extends Component
     public function render()
     {
         return view('livewire.first-register.first-entry', [
-            'locations' => Location::orderBy('loc_name')->get(['loc_code', 'loc_name']),
+            'treasuries' => Treasury::orderBy('treasury_name')->get(['treasury_code', 'treasury_name']),
             'banks' => Bank::orderBy('bank_name')->get(['bank_code', 'bank_name', 'branch_name']),
             'purposes' => Purpose::orderBy('pid')->get(['pid', 'purpose']),
-            'ddos' => $this->locCode !== ''
-                ? Ddo::where('loc_code', $this->locCode)->orderBy('ddo_name')->get(['ddo_sl', 'ddo_name', 'ddo_code'])
+            'ddos' => $this->treasuryCode !== ''
+                ? Ddo::where('treasury_code', $this->treasuryCode)->orderBy('ddo_name')->get(['ddo_sl', 'ddo_name', 'ddo_code'])
                 : collect(),
         ]);
     }

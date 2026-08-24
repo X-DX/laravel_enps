@@ -7,7 +7,7 @@
         $head = 'mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white';
         $accent = '<span class="h-4 w-1 rounded-full bg-gradient-to-b from-indigo-500 to-sky-500"></span>';
 
-        $locOptions = $locations->map(fn ($l) => ['value' => $l->loc_code, 'label' => $l->loc_name]);
+        $treasuryOptions = $treasuries->map(fn ($t) => ['value' => $t->treasury_code, 'label' => $t->treasury_name . ' (' . $t->treasury_code . ')']);
         $bankOptions = $banks->map(fn ($b) => ['value' => $b->bank_code, 'label' => trim($b->bank_name) . ' — ' . trim($b->branch_name)]);
         $purposeOptions = $purposes->map(fn ($p) => ['value' => $p->pid, 'label' => trim($p->purpose)]);
         $ddoOptions = $ddos->map(fn ($d) => ['value' => $d->ddo_sl, 'label' => $d->ddo_name . ($d->ddo_code ? ' (' . $d->ddo_code . ')' : '')]);
@@ -26,13 +26,13 @@
             <h2 class="{{ $head }}">{!! $accent !!} Source</h2>
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
-                    <label class="{{ $label }}">Office Location</label>
-                    <x-searchable-select model="locCode" :options="$locOptions" placeholder="Select location…" :live="true" />
-                    @error('locCode') <p class="{{ $err }}">{{ $message }}</p> @enderror
+                    <label class="{{ $label }}">Treasury Location</label>
+                    <x-searchable-select model="treasuryCode" :options="$treasuryOptions" placeholder="Select treasury…" :live="true" />
+                    @error('treasuryCode') <p class="{{ $err }}">{{ $message }}</p> @enderror
                 </div>
                 <div>
                     <label class="{{ $label }}">DDO</label>
-                    <x-searchable-select model="ddocode" :options="$ddoOptions" :placeholder="$locCode === '' ? 'Select a location first' : 'Select DDO…'" :disabled="$locCode === ''" wire:key="ddo-{{ $locCode }}" />
+                    <x-searchable-select model="ddocode" :options="$ddoOptions" :placeholder="$treasuryCode === '' ? 'Select a treasury first' : 'Select DDO…'" :disabled="$treasuryCode === ''" wire:key="ddo-{{ $treasuryCode }}" />
                     @error('ddocode') <p class="{{ $err }}">{{ $message }}</p> @enderror
                 </div>
                 <div class="sm:col-span-2">
@@ -58,16 +58,16 @@
                     @error('orderDate') <p class="{{ $err }}">{{ $message }}</p> @enderror
                 </div>
                 <div class="sm:col-span-2 flex items-center gap-2">
-                    <input wire:model="isDraft" id="isDraft" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30">
+                    <input wire:model.live="isDraft" id="isDraft" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30">
                     <label for="isDraft" class="text-sm text-slate-700 dark:text-slate-300">This is a <span class="font-semibold">Draft</span> (leave unticked for a <span class="font-semibold">Receipt</span>)</label>
                 </div>
                 <div>
-                    <label for="draftNo" class="{{ $label }}">Draft / Receipt No</label>
+                    <label for="draftNo" class="{{ $label }}">{{ $isDraft ? 'Draft No' : 'Receipt No' }}</label>
                     <input wire:model="draftNo" id="draftNo" type="text" inputmode="numeric" class="{{ $input }}">
                     @error('draftNo') <p class="{{ $err }}">{{ $message }}</p> @enderror
                 </div>
                 <div>
-                    <label for="draftDate" class="{{ $label }}">Draft / Receipt Date</label>
+                    <label for="draftDate" class="{{ $label }}">{{ $isDraft ? 'Draft Date' : 'Receipt Date' }}</label>
                     <input wire:model="draftDate" id="draftDate" type="date" class="{{ $input }}">
                     @error('draftDate') <p class="{{ $err }}">{{ $message }}</p> @enderror
                 </div>
