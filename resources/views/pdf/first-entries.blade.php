@@ -25,14 +25,17 @@
             <tr>
                 <th>Sl</th>
                 <th>Receipt No</th>
+                <th>Treasury Location</th>
+                <th>DDO</th>
+                <th>Order/Letter No</th>
+                <th>Order Date</th>
                 <th>Draft/Receipt No</th>
                 <th>Type</th>
-                <th>Date</th>
+                <th>Draft/Receipt Date</th>
                 <th class="r">Amount</th>
-                <th>DDO</th>
-                <th>Purpose</th>
                 <th>Contribution</th>
-                <th>Pension</th>
+                <th>Draw Bank</th>
+                <th>Purpose</th>
                 <th>Status</th>
             </tr>
         </thead>
@@ -41,18 +44,21 @@
                 <tr>
                     <td>{{ $i + 1 }}</td>
                     <td>{{ $r->sl_no }}</td>
+                    <td>{{ $r->ddo?->treasury?->treasury_name ?? $r->ddo?->location?->loc_name ?? '—' }}</td>
+                    <td>{{ $r->ddo?->ddo_name ?? '—' }}</td>
+                    <td>{{ $r->order_no ?: '—' }}</td>
+                    <td>{{ $r->order_date?->format('d-m-Y') ?? '—' }}</td>
                     <td>{{ $r->draft_no }}</td>
                     <td>{{ $r->type === 'D' ? 'Draft' : 'Receipt' }}</td>
                     <td>{{ $r->draft_date?->format('d-m-Y') ?? '—' }}</td>
                     <td class="r">{{ number_format((float) $r->amount, 2) }}</td>
-                    <td>{{ $r->ddo?->ddo_name ?? '—' }}</td>
-                    <td>{{ $r->purposeCode?->purpose ?? $r->purpose }}</td>
                     <td>{{ $r->contribution_type === 'SC' ? 'Single' : ($r->contribution_type === 'DC' ? 'Double' : $r->contribution_type) }}</td>
-                    <td>{{ $r->pension_type === 'U' ? 'UPS' : 'NPS' }}</td>
-                    <td>{{ $r->flag === 'T' ? 'Pending' : (in_array($r->flag, ['FZ', 'CR']) ? 'Finalized' : $r->flag) }}</td>
+                    <td>{{ $r->bank ? trim($r->bank->bank_name) . ', ' . trim($r->bank->branch_name) : '—' }}</td>
+                    <td>{{ $r->purposeCode?->purpose ?? $r->purpose }}</td>
+                    <td>{{ $r->statusLabel() }}</td>
                 </tr>
             @empty
-                <tr><td colspan="11" class="empty">No entries.</td></tr>
+                <tr><td colspan="14" class="empty">No entries.</td></tr>
             @endforelse
         </tbody>
     </table>

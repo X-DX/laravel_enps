@@ -63,8 +63,34 @@ class FirstReceipt extends Model
     }
 
     /**
+     * The three-state lifecycle label, matching the legacy screens exactly:
+     *   T  → just entered · CR → finalized from receipt, awaiting CR generation · FZ → CR generated.
+     * Kept here (not in a view) so the list, detail page, Excel and PDF all read the same text.
+     */
+    public function statusLabel(): string
+    {
+        return match ($this->flag) {
+            'T' => 'Pending at First Receipt',
+            'CR' => 'Pending at CR Generation',
+            'FZ' => 'Finalized (CR Generated)',
+            default => (string) $this->flag,
+        };
+    }
+
+    /** A colour-tone keyword for the status badge; the view maps it to CSS classes. */
+    public function statusTone(): string
+    {
+        return match ($this->flag) {
+            'T' => 'amber',
+            'CR' => 'sky',
+            'FZ' => 'emerald',
+            default => 'slate',
+        };
+    }
+
+    /**
      * Search (draft no / order no / receipt no) + status filter.
-     * status: '' = all · 'T' = pending · 'F' = finalized (flag in FZ/CR).
+     * status: '' = all · 'T' = pending · 'CR'/'FZ' = one finalized stage · 'F' = both finalized (FZ+CR).
      */
     public function scopeFilter(Builder $query, string $search, string $status): Builder
     {
@@ -77,7 +103,7 @@ class FirstReceipt extends Model
                         ->orWhereRaw('CAST(sl_no AS TEXT) LIKE ?', [$term]);
                 });
             })
-            ->when($status === 'T', fn ($q) => $q->where('flag', 'T'))
+            ->when(in_array($status, ['T', 'CR', 'FZ'], true), fn ($q) => $q->where('flag', $status))
             ->when($status === 'F', fn ($q) => $q->whereIn('flag', ['FZ', 'CR']));
     }
 }

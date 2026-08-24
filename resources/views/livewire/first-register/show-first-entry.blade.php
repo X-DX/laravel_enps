@@ -1,9 +1,6 @@
 <div class="mx-auto max-w-4xl">
     @php
-        $statusLabel = $entry->flag === 'T' ? 'Pending' : (in_array($entry->flag, ['FZ', 'CR']) ? 'Finalized' : $entry->flag);
-        $statusClass = $entry->flag === 'T'
-            ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300'
-            : (in_array($entry->flag, ['FZ', 'CR']) ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300');
+        $statusLabel = $entry->statusLabel();
         $isDraft = $entry->type === 'D';
 
         $rows = [

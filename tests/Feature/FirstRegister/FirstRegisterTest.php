@@ -353,6 +353,28 @@ class FirstRegisterTest extends TestCase
             ->assertSee('55555')          // draft/receipt no
             ->assertSee('DDO Alpha')      // via the ddo relation
             ->assertSee('DEDUCTION FOR JAN') // via the purpose relation
-            ->assertSee('Finalized');     // flag CR
+            ->assertSee('Pending at CR Generation'); // flag CR → 3-state label
+    }
+
+    public function test_finalized_status_filter_narrows_to_one_stage(): void
+    {
+        $this->seedReceipt(flag: 'CR', draftNo: 'STAGE-CR');
+        $this->seedReceipt(flag: 'FZ', draftNo: 'STAGE-FZ');
+
+        $c = Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(FirstEntries::class, ['mode' => 'finalized']);
+
+        // Default (no filter): both CR and FZ show.
+        $c->assertSee('STAGE-CR')->assertSee('STAGE-FZ');
+
+        // Narrow to FZ only.
+        $c->set('status', 'FZ')
+            ->assertSee('STAGE-FZ')
+            ->assertDontSee('STAGE-CR');
+
+        // Narrow to CR only.
+        $c->set('status', 'CR')
+            ->assertSee('STAGE-CR')
+            ->assertDontSee('STAGE-FZ');
     }
 }

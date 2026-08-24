@@ -22,14 +22,14 @@ class FirstEntriesExport implements FromQuery, WithHeadings, WithMapping
     public function query(): Builder
     {
         return FirstReceipt::query()
-            ->with(['ddo', 'bank', 'purposeCode'])
+            ->with(['ddo.treasury', 'ddo.location', 'bank', 'purposeCode'])
             ->filter($this->search, $this->status)
             ->orderByDesc('sl_no');
     }
 
     public function headings(): array
     {
-        return ['Receipt No', 'Draft/Receipt No', 'Type', 'Draft Date', 'Order No', 'Amount', 'DDO', 'Bank', 'Purpose', 'Contribution', 'Pension', 'Status'];
+        return ['Receipt No', 'Treasury Location', 'DDO', 'Order/Letter No', 'Order Date', 'Draft/Receipt No', 'Type', 'Draft/Receipt Date', 'Amount', 'Contribution', 'Draw Bank', 'Purpose', 'Status'];
     }
 
     /**
@@ -39,17 +39,18 @@ class FirstEntriesExport implements FromQuery, WithHeadings, WithMapping
     {
         return [
             $r->sl_no,
+            $r->ddo?->treasury?->treasury_name ?? $r->ddo?->location?->loc_name,
+            $r->ddo?->ddo_name,
+            $r->order_no,
+            $r->order_date?->format('d-m-Y'),
             $r->draft_no,
             $r->type === 'D' ? 'Draft' : 'Receipt',
             $r->draft_date?->format('d-m-Y'),
-            $r->order_no,
             number_format((float) $r->amount, 2, '.', ''),
-            $r->ddo?->ddo_name,
+            $r->contribution_type === 'SC' ? 'Single' : ($r->contribution_type === 'DC' ? 'Double' : $r->contribution_type),
             $r->bank ? trim($r->bank->bank_name) . ' - ' . trim($r->bank->branch_name) : null,
             $r->purposeCode?->purpose,
-            $r->contribution_type === 'SC' ? 'Single' : ($r->contribution_type === 'DC' ? 'Double' : $r->contribution_type),
-            $r->pension_type === 'U' ? 'UPS' : 'NPS',
-            $r->flag === 'T' ? 'Pending' : (in_array($r->flag, ['FZ', 'CR']) ? 'Finalized' : $r->flag),
+            $r->statusLabel(),
         ];
     }
 }

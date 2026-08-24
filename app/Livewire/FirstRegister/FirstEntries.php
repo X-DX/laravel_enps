@@ -52,7 +52,9 @@ class FirstEntries extends Component
     {
         return match ($this->mode) {
             'pending' => 'T',
-            'finalized' => 'F',
+            // Finalized holds both CR and FZ; the dropdown may narrow to one of them.
+            'finalized' => in_array($this->status, ['CR', 'FZ'], true) ? $this->status : 'F',
+            // View All: '' = every flag, or narrow to T / CR / FZ.
             default => $this->status,
         };
     }
@@ -87,7 +89,7 @@ class FirstEntries extends Component
         $this->authorize(self::ABILITIES[$this->mode]);
 
         $rows = FirstReceipt::query()
-            ->with(['ddo', 'bank', 'purposeCode'])
+            ->with(['ddo.treasury', 'ddo.location', 'bank', 'purposeCode'])
             ->filter($this->search, $this->effectiveStatus())
             ->orderByDesc('sl_no')
             ->get();
@@ -157,7 +159,7 @@ class FirstEntries extends Component
     public function render()
     {
         $entries = FirstReceipt::query()
-            ->with(['ddo', 'bank', 'purposeCode'])
+            ->with(['ddo.treasury', 'ddo.location', 'bank', 'purposeCode'])
             ->filter($this->search, $this->effectiveStatus())
             ->orderByDesc('sl_no')
             ->paginate($this->perPage);

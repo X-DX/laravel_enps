@@ -36,14 +36,17 @@
                 class="block w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
         </div>
 
-        @if ($mode === 'all')
+        @if (in_array($mode, ['all', 'finalized']))
             <div class="flex items-center gap-2">
                 <label for="status" class="text-sm text-slate-500 dark:text-slate-400">Status</label>
                 <select wire:model.live="status" id="status"
                     class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 transition focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
                     <option value="">All</option>
-                    <option value="T">Pending</option>
-                    <option value="F">Finalized</option>
+                    @if ($mode === 'all')
+                        <option value="T">Pending at First Receipt</option>
+                    @endif
+                    <option value="CR">Pending at CR Generation</option>
+                    <option value="FZ">Finalized (CR Generated)</option>
                 </select>
             </div>
         @endif
@@ -89,71 +92,91 @@
         @endif
     </div>
 
-    {{-- Table --}}
+    {{-- Table (compact). Tone → CSS classes for the 3-state status badge. --}}
+    @php
+        $tones = [
+            'amber' => 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
+            'sky' => 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
+            'emerald' => 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
+            'slate' => 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300',
+        ];
+        $colspan = 14 + ($mode === 'pending' ? 1 : 0) + (in_array($mode, ['pending', 'finalized']) ? 1 : 0);
+    @endphp
     <div wire:loading.class.delay="opacity-50" wire:target="search,status,perPage" class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm transition dark:border-white/10 dark:bg-white/[0.03]">
-        <table class="min-w-full divide-y divide-slate-200 dark:divide-white/10">
+        <table class="min-w-full divide-y divide-slate-200 text-xs dark:divide-white/10">
             <thead>
-                <tr class="text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                <tr class="whitespace-nowrap text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     @if ($mode === 'pending')
-                        <th class="px-3 py-2">
+                        <th class="px-2 py-2">
                             <input type="checkbox" wire:click="toggleSelectAll"
                                 @checked(count($pagePendingKeys) > 0 && count(array_diff($pagePendingKeys, $selected)) === 0)
                                 @disabled(count($pagePendingKeys) === 0)
                                 class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30">
                         </th>
                     @endif
-                    <th class="px-3 py-2">Sl</th>
-                    <th class="px-3 py-2">Receipt No</th>
-                    <th class="px-3 py-2">Draft/Receipt No</th>
-                    <th class="px-3 py-2">Date</th>
-                    <th class="px-3 py-2">Amount</th>
-                    <th class="px-3 py-2">DDO</th>
-                    <th class="px-3 py-2">Purpose</th>
-                    <th class="px-3 py-2">Contribution</th>
-                    <th class="px-3 py-2">Pension</th>
-                    <th class="px-3 py-2">Status</th>
+                    <th class="px-2 py-2">Sl no</th>
+                    <th class="px-2 py-2">Receipt No</th>
+                    <th class="px-2 py-2">Treasury Location</th>
+                    <th class="px-2 py-2">DDO</th>
+                    <th class="px-2 py-2">Order/Letter No</th>
+                    <th class="px-2 py-2">Order Date</th>
+                    <th class="px-2 py-2">Draft/Receipt No</th>
+                    <th class="px-2 py-2">Draft/Receipt Date</th>
+                    <th class="px-2 py-2 text-right">Amount</th>
+                    <th class="px-2 py-2">Contribution</th>
+                    <th class="px-2 py-2">Draw Bank</th>
+                    <th class="px-2 py-2">Purpose</th>
+                    <th class="px-2 py-2">Status</th>
                     @if (in_array($mode, ['pending', 'finalized']))
-                        <th class="px-3 py-2 text-right">Actions</th>
+                        <th class="px-2 py-2 text-right">Actions</th>
                     @endif
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-100 dark:divide-white/5">
                 @forelse ($entries as $entry)
-                    <tr wire:key="fr-{{ $entry->sl_no }}" class="text-sm transition hover:bg-slate-50 dark:hover:bg-white/5">
+                    @php
+                        $isDraft = $entry->type === 'D';
+                        $drBadge = $isDraft
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                            : 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300';
+                        $treasuryLocation = $entry->ddo?->treasury?->treasury_name ?? $entry->ddo?->location?->loc_name;
+                        $bankName = $entry->bank ? trim($entry->bank->bank_name) . ', ' . trim($entry->bank->branch_name) : null;
+                    @endphp
+                    <tr wire:key="fr-{{ $entry->sl_no }}" class="whitespace-nowrap align-middle transition hover:bg-slate-50 dark:hover:bg-white/5">
                         @if ($mode === 'pending')
-                            <td class="px-3 py-2">
+                            <td class="px-2 py-1.5">
                                 <input type="checkbox" wire:model.live="selected" value="{{ $entry->sl_no }}"
                                     class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30">
                             </td>
                         @endif
-                        <td class="px-3 py-2 text-slate-500 dark:text-slate-400">{{ $entries->firstItem() + $loop->index }}</td>
-                        <td class="px-3 py-2 font-medium">
+                        <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400">{{ $entries->firstItem() + $loop->index }}</td>
+                        <td class="px-2 py-1.5 font-medium">
                             <a href="{{ route('first-entries.show', $entry->sl_no) }}" wire:navigate class="text-indigo-600 hover:underline dark:text-indigo-300">{{ $entry->sl_no }}</a>
                         </td>
-                        <td class="px-3 py-2 text-slate-700 dark:text-slate-200">
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $treasuryLocation ?? '—' }}</td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->ddo?->ddo_name ?? '—' }}</td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->order_no ?: '—' }}</td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->order_date?->format('d-m-Y') ?? '—' }}</td>
+                        <td class="px-2 py-1.5 text-slate-700 dark:text-slate-200">
                             {{ $entry->draft_no }}
-                            <span class="ml-1 rounded px-1 py-0.5 text-[10px] font-bold {{ $entry->type === 'D' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300' }}">{{ $entry->type === 'D' ? 'D' : 'R' }}</span>
+                            <span class="ml-1 rounded px-1 py-0.5 text-[10px] font-bold {{ $drBadge }}">{{ $isDraft ? 'D' : 'R' }}</span>
                         </td>
-                        <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $entry->draft_date?->format('d-m-Y') ?? '—' }}</td>
-                        <td class="px-3 py-2 font-medium text-slate-800 dark:text-slate-100">{{ number_format((float) $entry->amount, 2) }}</td>
-                        <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $entry->ddo?->ddo_name ?? '—' }}</td>
-                        <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $entry->purposeCode?->purpose ?? $entry->purpose }}</td>
-                        <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $entry->contribution_type === 'SC' ? 'Single' : ($entry->contribution_type === 'DC' ? 'Double' : $entry->contribution_type) }}</td>
-                        <td class="px-3 py-2 text-slate-600 dark:text-slate-300">{{ $entry->pension_type === 'U' ? 'UPS' : 'NPS' }}</td>
-                        <td class="px-3 py-2">
-                            @if ($entry->flag === 'T')
-                                <span class="rounded-md bg-amber-300 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-500/20 dark:text-amber-300">Pending</span>
-                            @elseif (in_array($entry->flag, ['FZ', 'CR']))
-                                <span class="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300">Finalized</span>
-                            @else
-                                <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-300">{{ $entry->flag }}</span>
-                            @endif
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">
+                            {{ $entry->draft_date?->format('d-m-Y') ?? '—' }}
+                            <span class="ml-1 rounded px-1 py-0.5 text-[10px] font-bold {{ $drBadge }}">{{ $isDraft ? 'D' : 'R' }}</span>
+                        </td>
+                        <td class="px-2 py-1.5 text-right font-medium text-slate-800 dark:text-slate-100">{{ number_format((float) $entry->amount, 2) }}</td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->contribution_type === 'SC' ? 'Single' : ($entry->contribution_type === 'DC' ? 'Double' : $entry->contribution_type) }}</td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $bankName ?? '—' }}</td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->purposeCode?->purpose ?? $entry->purpose }}</td>
+                        <td class="px-2 py-1.5">
+                            <span class="inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $tones[$entry->statusTone()] }}">{{ $entry->statusLabel() }}</span>
                         </td>
                         @if (in_array($mode, ['pending', 'finalized']))
-                            <td class="px-3 py-2 text-right">
+                            <td class="px-2 py-1.5 text-right">
                                 @can('entrysection.entry_first_register')
                                     <a href="{{ route('first-entries.edit', $entry->sl_no) }}" wire:navigate
-                                        class="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
+                                        class="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
                                         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
                                         Edit
                                     </a>
@@ -163,7 +186,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="12"><x-empty-state icon="banknotes" title="No first-register entries found" message="Try a different search or status filter." /></td>
+                        <td colspan="{{ $colspan }}"><x-empty-state icon="banknotes" title="No first-register entries found" message="Try a different search or status filter." /></td>
                     </tr>
                 @endforelse
             </tbody>
