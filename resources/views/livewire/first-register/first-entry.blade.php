@@ -13,11 +13,11 @@
         $ddoOptions = $ddos->map(fn ($d) => ['value' => $d->ddo_sl, 'label' => $d->ddo_name . ($d->ddo_code ? ' (' . $d->ddo_code . ')' : '')]);
     @endphp
 
-    <x-breadcrumbs class="mb-4" :crumbs="['Entry Section' => null, 'First Register' => null]" current="Entry First Register" />
+    <x-breadcrumbs class="mb-4" :crumbs="['Entry Section' => null, 'First Register' => null]" :current="$editingId ? 'Edit First Entry' : 'Entry First Register'" />
 
     <div class="mb-5">
-        <h1 class="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">Entry First Register</h1>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Record an incoming receipt / draft. Saved as pending — finalize it later.</p>
+        <h1 class="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ $editingId ? 'Edit First Entry' : 'Entry First Register' }}</h1>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $editingId ? 'Update this pending entry.' : 'Record an incoming receipt / draft. Saved as pending — finalize it later.' }}</p>
     </div>
 
     <form wire:submit="save" class="space-y-5">
@@ -32,7 +32,7 @@
                 </div>
                 <div>
                     <label class="{{ $label }}">DDO</label>
-                    <x-searchable-select model="ddocode" :options="$ddoOptions" :placeholder="$treasuryCode === '' ? 'Select a treasury first' : 'Select DDO…'" :disabled="$treasuryCode === ''" wire:key="ddo-{{ $treasuryCode }}" />
+                    <x-searchable-select model="ddocode" :options="$ddoOptions" :placeholder="$treasuryCode === '' && ! $editingId ? 'Select a treasury first' : 'Select DDO…'" :disabled="! $editingId && $treasuryCode === ''" wire:key="ddo-{{ $treasuryCode }}" />
                     @error('ddocode') <p class="{{ $err }}">{{ $message }}</p> @enderror
                 </div>
                 <div class="sm:col-span-2">
@@ -123,8 +123,8 @@
             @endif
             <button type="submit" wire:loading.attr="disabled" wire:target="save"
                 class="rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-400 hover:to-sky-400 disabled:cursor-not-allowed disabled:opacity-70">
-                <span wire:loading.remove wire:target="save">Save entry</span>
-                <span wire:loading wire:target="save">Saving…</span>
+                <span wire:loading.remove wire:target="save">{{ $editingId ? 'Update entry' : 'Save entry' }}</span>
+                <span wire:loading wire:target="save">{{ $editingId ? 'Updating…' : 'Saving…' }}</span>
             </button>
         </div>
     </form>

@@ -37,9 +37,34 @@ class FirstEntry extends Component
     /** Revealed after a duplicate warning, so the operator can deliberately override. */
     public bool $showForceSave = false;
 
-    public function mount(): void
+    /** null = a new entry; set = editing this receipt (sl_no). */
+    public ?int $editingId = null;
+
+    public function mount(?FirstReceipt $firstReceipt = null): void
     {
         $this->authorize(self::ABILITY);
+
+        if ($firstReceipt?->exists) {
+            $this->loadForEdit($firstReceipt);
+        }
+    }
+
+    /** Pre-fill the form from an existing (pending) entry. */
+    private function loadForEdit(FirstReceipt $r): void
+    {
+        $this->editingId = $r->sl_no;
+        $this->ddocode = (string) $r->ddocode;
+        $this->treasuryCode = (string) ($r->ddo?->treasury_code ?? '');
+        $this->orderNo = (string) $r->order_no;
+        $this->orderDate = $r->order_date?->format('Y-m-d') ?? '';
+        $this->isDraft = $r->type === 'D';
+        $this->draftNo = (string) $r->draft_no;
+        $this->draftDate = $r->draft_date?->format('Y-m-d') ?? '';
+        $this->amount = $r->amount !== null ? (string) (float) $r->amount : '';
+        $this->contributionType = (string) $r->contribution_type;
+        $this->pensionType = $r->pension_type ?: 'N';
+        $this->drawBankCode = (string) $r->draw_bank_code;
+        $this->purpose = (string) $r->purpose;
     }
 
     /** Treasury Location changed → clear the (now-stale) DDO; its list refills below. */
@@ -57,7 +82,7 @@ class FirstEntry extends Component
     protected function rules(): array
     {
         return [
-            'treasuryCode' => ['required'],
+            'treasuryCode' => [$this->editingId ? 'nullable' : 'required'],
             'ddocode' => ['required', 'integer', 'exists:ddo_master,ddo_sl'],
             'orderNo' => ['required', 'string'],
             'orderDate' => ['required', 'date'],
@@ -87,33 +112,44 @@ class FirstEntry extends Component
         $this->authorize(self::ABILITY);
         $this->validate();
 
-        // Duplicate guard: same draft/receipt number + date — unless the operator forces it.
-        $exists = FirstReceipt::where('draft_no', $this->draftNo)
+        // Duplicate guard: same draft/receipt number + date — excluding this record on edit.
+        $duplicate = FirstReceipt::where('draft_no', $this->draftNo)
             ->whereDate('draft_date', $this->draftDate)
+            ->when($this->editingId !== null, fn ($q) => $q->where('sl_no', '!=', $this->editingId))
             ->exists();
 
-        if ($exists && ! $force) {
+        if ($duplicate && ! $force) {
             $this->showForceSave = true;
             $this->dispatch('notify', type: 'error', message: 'A receipt/draft with this number and date already exists. Click “Save anyway” to override.');
             return;
         }
 
-        FirstReceipt::create([
+        $data = [
             'draft_no' => $this->draftNo,
             'draft_date' => $this->draftDate,
             'order_no' => strtoupper($this->orderNo),
             'order_date' => $this->orderDate,
             'amount' => $this->amount,
-            'date_of_entry' => now()->toDateString(),
-            'flag' => 'T',
             'ddocode' => (int) $this->ddocode,
             'type' => $this->isDraft ? 'D' : 'R',
             'draw_bank_code' => (int) $this->drawBankCode,
             'purpose' => $this->purpose,
             'contribution_type' => $this->contributionType,
             'pension_type' => $this->pensionType,
+        ];
+
+        if ($this->editingId !== null) {
+            FirstReceipt::where('sl_no', $this->editingId)->update($data);
+            $this->showForceSave = false;
+            $this->dispatch('notify', type: 'success', message: 'First register entry updated.');
+            return;
+        }
+
+        FirstReceipt::create(array_merge($data, [
+            'date_of_entry' => now()->toDateString(),
+            'flag' => 'T',
             'user_id' => auth()->id(),
-        ]);
+        ]));
 
         $this->reset();
         $this->pensionType = 'N';
@@ -127,13 +163,24 @@ class FirstEntry extends Component
 
     public function render()
     {
+        $ddos = $this->treasuryCode !== ''
+            ? Ddo::where('treasury_code', $this->treasuryCode)->orderBy('ddo_name')->get(['ddo_sl', 'ddo_name', 'ddo_code'])
+            : collect();
+
+        // When editing, the entry's own DDO may belong to a treasury that isn't linked — keep it
+        // in the list so it still shows as the selected option.
+        if ($this->ddocode !== '' && ! $ddos->contains(fn ($d) => (string) $d->ddo_sl === (string) $this->ddocode)) {
+            $current = Ddo::find((int) $this->ddocode, ['ddo_sl', 'ddo_name', 'ddo_code']);
+            if ($current) {
+                $ddos = collect([$current])->concat($ddos);
+            }
+        }
+
         return view('livewire.first-register.first-entry', [
             'treasuries' => Treasury::orderBy('treasury_name')->get(['treasury_code', 'treasury_name']),
             'banks' => Bank::orderBy('bank_name')->get(['bank_code', 'bank_name', 'branch_name']),
             'purposes' => Purpose::orderBy('pid')->get(['pid', 'purpose']),
-            'ddos' => $this->treasuryCode !== ''
-                ? Ddo::where('treasury_code', $this->treasuryCode)->orderBy('ddo_name')->get(['ddo_sl', 'ddo_name', 'ddo_code'])
-                : collect(),
+            'ddos' => $ddos,
         ]);
     }
 }

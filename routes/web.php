@@ -170,5 +170,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/first-register/entry', FirstEntry::class)
             ->middleware('can:entrysection.entry_first_register')
             ->name('first-entries.entry');
+
+        // Edit a pending entry (same form, edit mode). sl_no is the route key.
+        Route::get('/first-register/{firstReceipt}/edit', FirstEntry::class)
+            ->whereNumber('firstReceipt')
+            ->middleware('can:entrysection.entry_first_register')
+            ->name('first-entries.edit');
     });
 });

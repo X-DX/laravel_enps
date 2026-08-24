@@ -4,6 +4,7 @@ namespace Tests\Feature\FirstRegister;
 
 use App\Livewire\FirstRegister\FirstEntries;
 use App\Livewire\FirstRegister\FirstEntry;
+use App\Models\FirstReceipt;
 use App\Models\Permission;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
@@ -147,9 +148,9 @@ class FirstRegisterTest extends TestCase
             ->set('purpose', 'D01');
     }
 
-    private function seedReceipt(string $flag = 'T', string $draftNo = '999', string $draftDate = '2024-02-01'): void
+    private function seedReceipt(string $flag = 'T', string $draftNo = '999', string $draftDate = '2024-02-01'): int
     {
-        DB::table('first_receipt')->insert([
+        return DB::table('first_receipt')->insertGetId([
             'draft_no' => $draftNo,
             'draft_date' => $draftDate,
             'order_no' => 'ORD/X',
@@ -265,5 +266,70 @@ class FirstRegisterTest extends TestCase
         Livewire::actingAs($this->makeUser('admin', 'A'))->test(FirstEntries::class)
             ->set('status', 'T')
             ->assertSee('PEND1')->assertDontSee('FINAL1');
+    }
+
+    /* ---- pending actions (6.1b) ---- */
+
+    public function test_finalize_selected_flips_pending_to_cr(): void
+    {
+        $a = $this->seedReceipt(flag: 'T', draftNo: 'A1');
+        $b = $this->seedReceipt(flag: 'T', draftNo: 'B1');
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(FirstEntries::class, ['mode' => 'pending'])
+            ->set('selected', [(string) $a, (string) $b])
+            ->call('finalizeSelected')
+            ->assertSet('selected', []);
+
+        $this->assertSame(2, DB::table('first_receipt')->where('flag', 'CR')->whereNotNull('finalize_date')->count());
+    }
+
+    public function test_delete_selected_removes_only_draft_entries(): void
+    {
+        $draft = $this->seedReceipt(flag: 'T', draftNo: 'D1');
+        $final = $this->seedReceipt(flag: 'CR', draftNo: 'F1');
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(FirstEntries::class, ['mode' => 'pending'])
+            ->set('selected', [(string) $draft, (string) $final])
+            ->call('deleteSelected');
+
+        $this->assertDatabaseMissing('first_receipt', ['sl_no' => $draft]);   // draft gone
+        $this->assertDatabaseHas('first_receipt', ['sl_no' => $final]);        // finalized kept
+    }
+
+    public function test_toggle_select_all_selects_the_pages_pending_entries(): void
+    {
+        $a = $this->seedReceipt(flag: 'T', draftNo: 'A1');
+        $b = $this->seedReceipt(flag: 'T', draftNo: 'B1');
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(FirstEntries::class, ['mode' => 'pending'])
+            ->call('toggleSelectAll')
+            ->assertSet('selected', [(string) $b, (string) $a]);   // newest sl_no first
+    }
+
+    public function test_the_edit_route_is_forbidden_without_permission(): void
+    {
+        $id = $this->seedReceipt();
+
+        $this->actingAs($this->makeUser('staff', 'S'))->get("/first-register/{$id}/edit")->assertForbidden();
+    }
+
+    public function test_editing_a_pending_entry_updates_it(): void
+    {
+        $id = $this->seedReceipt(flag: 'T', draftNo: '111', draftDate: '2024-03-03');
+        $receipt = FirstReceipt::find($id);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(FirstEntry::class, ['firstReceipt' => $receipt])
+            ->assertSet('editingId', $id)
+            ->assertSet('draftNo', '111')
+            ->set('amount', '77777')
+            ->set('contributionType', 'DC')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('first_receipt', ['sl_no' => $id, 'amount' => 77777, 'contribution_type' => 'DC', 'flag' => 'T']);
     }
 }

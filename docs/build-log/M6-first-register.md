@@ -54,9 +54,21 @@ php artisan test --filter=FirstRegisterTest
 duplicate "Save anyway" guard, list permission, pending/finalized flag filtering, and the View
 All status filter. Full suite: **164 → 171 passing**.
 
-## Slice 6.1b — Pending actions (next)
-Finalize (`flag → CR` + date), Delete (drafts only), and per-row **Edit** (all fields), reusing
-the entry form in edit mode.
+## Slice 6.1b — Pending actions ✅
+On the **Pending** screen: a **select-all** header checkbox + per-row checkboxes, and the bar
+gains **Finalize** (`flag → CR` + finalize date, in a transaction) and **Delete** (drafts only,
+`flag='T'`). Each pending row has an **Edit** button → the same `FirstEntry` form in **edit
+mode** (route-model bound by `sl_no`), all fields editable, saved with an UPDATE (flag stays
+`T`). The duplicate guard excludes the record being edited, and — as in the account edit — the
+entry's own DDO is injected into the options so it shows even when its treasury isn't linked.
+
+**Also (per request):** the entry form's location filter became **Treasury Location** (DDO by
+`treasury_code`), and ticking **Draft** relabels the fields *Draft No/Date* and auto-selects
+**Double Contribution**.
+
+**Tests:** 13 total — cascade, save + system fields, duplicate "save anyway", Draft→Double,
+finalize→CR, delete drafts-only, select-all, edit prefill + update, and permissions. Full suite:
+**171 → 177 passing**.
 
 ## Gotchas
 - **A `flag` with more than two states** — don't assume T/F; "finalized" here means FZ *or* CR.

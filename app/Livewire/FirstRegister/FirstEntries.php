@@ -5,6 +5,7 @@ namespace App\Livewire\FirstRegister;
 use App\Exports\FirstEntriesExport;
 use App\Models\FirstReceipt;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -25,6 +26,9 @@ class FirstEntries extends Component
     public int $perPage = 25;
     public string $search = '';
     public string $status = '';   // '' all · 'T' pending · 'F' finalized (only on the 'all' screen)
+
+    /** sl_no's of the pending rows ticked for finalize/delete (pending screen only). */
+    public array $selected = [];
 
     private const ABILITIES = [
         'all' => 'entrysection.view_all_first_entries',
@@ -99,6 +103,57 @@ class FirstEntries extends Component
         ]);
     }
 
+    /* ---- pending actions (6.1b) ---- */
+
+    public function finalizeSelected(): void
+    {
+        $this->authorize('entrysection.pending_first_entry');
+
+        if (empty($this->selected)) {
+            $this->dispatch('notify', type: 'error', message: 'Select at least one pending entry.');
+            return;
+        }
+
+        $count = DB::transaction(fn () => FirstReceipt::whereIn('sl_no', $this->selected)
+            ->where('flag', 'T')
+            ->update(['flag' => 'CR', 'finalize_date' => now()->toDateString()]));
+
+        $this->selected = [];
+        $this->dispatch('notify', type: 'success', message: 'Finalized ' . $count . ' entry(ies).');
+    }
+
+    public function deleteSelected(): void
+    {
+        $this->authorize('entrysection.pending_first_entry');
+
+        if (empty($this->selected)) {
+            $this->dispatch('notify', type: 'error', message: 'Select at least one pending entry.');
+            return;
+        }
+
+        // Only drafts (flag='T') can be deleted — a finalized entry is never removed here.
+        $count = FirstReceipt::whereIn('sl_no', $this->selected)->where('flag', 'T')->delete();
+
+        $this->selected = [];
+        $this->dispatch('notify', type: 'success', message: 'Deleted ' . $count . ' draft entry(ies).');
+    }
+
+    public function toggleSelectAll(): void
+    {
+        // Every row on a Pending page is a draft, so take the whole page's sl_no's.
+        $pageKeys = FirstReceipt::query()
+            ->filter($this->search, 'T')
+            ->orderByDesc('sl_no')
+            ->paginate($this->perPage)
+            ->pluck('sl_no')->map(fn ($id) => (string) $id)->all();
+
+        $allSelected = count($pageKeys) > 0 && count(array_diff($pageKeys, $this->selected)) === 0;
+
+        $this->selected = $allSelected
+            ? array_values(array_diff($this->selected, $pageKeys))
+            : array_values(array_unique([...$this->selected, ...$pageKeys]));
+    }
+
     public function render()
     {
         $entries = FirstReceipt::query()
@@ -109,6 +164,9 @@ class FirstEntries extends Component
 
         return view('livewire.first-register.first-entries', [
             'entries' => $entries,
+            'pagePendingKeys' => $this->mode === 'pending'
+                ? $entries->pluck('sl_no')->map(fn ($id) => (string) $id)->all()
+                : [],
         ]);
     }
 }
