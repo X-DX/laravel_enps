@@ -103,3 +103,40 @@
 /* Native <details> disclosure used by the sidebar — hide the default marker */
 summary { list-style: none; }
 summary::-webkit-details-marker { display: none; }
+
+/* ------------------------------------------------------------------ */
+/* Toast notifications (SweetAlert2) — premium, theme-aware            */
+/* ------------------------------------------------------------------ */
+.app-toast {
+    border-radius: 1rem !important;
+    padding: 0.85rem 1.05rem !important;
+    box-shadow: 0 18px 40px -18px rgb(15 23 42 / .45), 0 4px 12px -6px rgb(15 23 42 / .25) !important;
+    border: 1px solid rgb(226 232 240) !important;
+    border-left-width: 4px !important;
+    background: rgb(255 255 255 / .9) !important;
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    color: #0f172a !important;
+}
+html.dark .app-toast {
+    background: rgb(15 23 42 / .88) !important;
+    border-color: rgb(255 255 255 / .1) !important;
+    color: #e2e8f0 !important;
+}
+.app-toast--success { border-left-color: #10b981 !important; }
+.app-toast--error   { border-left-color: #f43f5e !important; }
+.app-toast--warning { border-left-color: #f59e0b !important; }
+.app-toast--info    { border-left-color: #6366f1 !important; }
+
+.app-toast-title { font-size: .875rem !important; font-weight: 600 !important; color: inherit !important; }
+.app-toast .swal2-icon { margin: 0 .6rem 0 0 !important; transform: scale(.85); }
+
+.app-toast-progress--success { background: #10b981 !important; }
+.app-toast-progress--error   { background: #f43f5e !important; }
+.app-toast-progress--warning { background: #f59e0b !important; }
+.app-toast-progress--info    { background: #6366f1 !important; }
+
+@keyframes app-toast-in { from { opacity: 0; transform: translateY(-10px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes app-toast-out { to { opacity: 0; transform: translateX(24px); } }
+.app-toast-in { animation: app-toast-in .35s cubic-bezier(.2, .7, .2, 1); }
+.app-toast-out { animation: app-toast-out .25s ease forwards; }

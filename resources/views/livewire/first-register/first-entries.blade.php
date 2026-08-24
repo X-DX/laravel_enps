@@ -112,7 +112,7 @@
                     <th class="px-3 py-2">Contribution</th>
                     <th class="px-3 py-2">Pension</th>
                     <th class="px-3 py-2">Status</th>
-                    @if ($mode === 'pending')
+                    @if (in_array($mode, ['pending', 'finalized']))
                         <th class="px-3 py-2 text-right">Actions</th>
                     @endif
                 </tr>
@@ -127,7 +127,9 @@
                             </td>
                         @endif
                         <td class="px-3 py-2 text-slate-500 dark:text-slate-400">{{ $entries->firstItem() + $loop->index }}</td>
-                        <td class="px-3 py-2 font-medium text-slate-900 dark:text-white">{{ $entry->sl_no }}</td>
+                        <td class="px-3 py-2 font-medium">
+                            <a href="{{ route('first-entries.show', $entry->sl_no) }}" wire:navigate class="text-indigo-600 hover:underline dark:text-indigo-300">{{ $entry->sl_no }}</a>
+                        </td>
                         <td class="px-3 py-2 text-slate-700 dark:text-slate-200">
                             {{ $entry->draft_no }}
                             <span class="ml-1 rounded px-1 py-0.5 text-[10px] font-bold {{ $entry->type === 'D' ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300' : 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300' }}">{{ $entry->type === 'D' ? 'D' : 'R' }}</span>
@@ -147,13 +149,15 @@
                                 <span class="rounded-md bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-white/10 dark:text-slate-300">{{ $entry->flag }}</span>
                             @endif
                         </td>
-                        @if ($mode === 'pending')
+                        @if (in_array($mode, ['pending', 'finalized']))
                             <td class="px-3 py-2 text-right">
-                                <a href="{{ route('first-entries.edit', $entry->sl_no) }}" wire:navigate
-                                    class="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
-                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
-                                    Edit
-                                </a>
+                                @can('entrysection.entry_first_register')
+                                    <a href="{{ route('first-entries.edit', $entry->sl_no) }}" wire:navigate
+                                        class="inline-flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
+                                        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125" /></svg>
+                                        Edit
+                                    </a>
+                                @endcan
                             </td>
                         @endif
                     </tr>

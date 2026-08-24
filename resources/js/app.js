@@ -8,18 +8,33 @@ const Toast = Swal.mixin({
     toast: true,
     position: 'top-end',
     showConfirmButton: false,
-    timer: 3000,
+    timer: 3500,
     timerProgressBar: true,
+    showClass: { popup: 'app-toast-in' },
+    hideClass: { popup: 'app-toast-out' },
+    didOpen: (el) => {
+        el.addEventListener('mouseenter', Swal.stopTimer);
+        el.addEventListener('mouseleave', Swal.resumeTimer);
+    },
 });
+
+function fireToast(type, message) {
+    Toast.fire({
+        icon: type,
+        title: message ?? '',
+        customClass: {
+            popup: 'app-toast app-toast--' + type,
+            title: 'app-toast-title',
+            timerProgressBar: 'app-toast-progress app-toast-progress--' + type,
+        },
+    });
+}
 
 // Livewire components fire: $this->dispatch('notify', type: 'success', message: '...')
 function registerNotify() {
     window.Livewire.on('notify', (event) => {
         const payload = Array.isArray(event) ? event[0] : event;
-        Toast.fire({
-            icon: payload?.type ?? 'success',
-            title: payload?.message ?? '',
-        });
+        fireToast(payload?.type ?? 'success', payload?.message);
     });
 }
 

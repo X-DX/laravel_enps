@@ -25,6 +25,7 @@ use App\Livewire\Accounts\AssignPran; // Entry Section: Assign PRAN Against Acco
 use App\Livewire\Accounts\MigrateToUps; // Entry Section: Migration to UPS (menu 161)
 use App\Livewire\FirstRegister\FirstEntries; // Entry Section: First Register lists (menu 172-174)
 use App\Livewire\FirstRegister\FirstEntry; // Entry Section: Entry First Register (menu 171)
+use App\Livewire\FirstRegister\ShowFirstEntry; // Entry Section: first-entry detail page
 use App\Livewire\Dashboard; // Analytics dashboard
 
 
@@ -171,10 +172,16 @@ Route::middleware('auth')->group(function () {
             ->middleware('can:entrysection.entry_first_register')
             ->name('first-entries.entry');
 
-        // Edit a pending entry (same form, edit mode). sl_no is the route key.
+        // Edit an entry (same form, edit mode). sl_no is the route key.
         Route::get('/first-register/{firstReceipt}/edit', FirstEntry::class)
             ->whereNumber('firstReceipt')
             ->middleware('can:entrysection.entry_first_register')
             ->name('first-entries.edit');
+
+        // Detail page for one entry (by Receipt No / sl_no). Digits only → placed last.
+        Route::get('/first-register/{firstReceipt}', ShowFirstEntry::class)
+            ->whereNumber('firstReceipt')
+            ->middleware('can:entrysection.view_all_first_entries')
+            ->name('first-entries.show');
     });
 });

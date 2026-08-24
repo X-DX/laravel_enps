@@ -4,6 +4,7 @@ namespace Tests\Feature\FirstRegister;
 
 use App\Livewire\FirstRegister\FirstEntries;
 use App\Livewire\FirstRegister\FirstEntry;
+use App\Livewire\FirstRegister\ShowFirstEntry;
 use App\Models\FirstReceipt;
 use App\Models\Permission;
 use App\Models\User;
@@ -331,5 +332,27 @@ class FirstRegisterTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('first_receipt', ['sl_no' => $id, 'amount' => 77777, 'contribution_type' => 'DC', 'flag' => 'T']);
+    }
+
+    /* ---- detail page ---- */
+
+    public function test_the_detail_route_is_forbidden_without_permission(): void
+    {
+        $id = $this->seedReceipt();
+
+        $this->actingAs($this->makeUser('staff', 'S'))->get("/first-register/{$id}")->assertForbidden();
+    }
+
+    public function test_the_detail_page_shows_the_entry(): void
+    {
+        $id = $this->seedReceipt(flag: 'CR', draftNo: '55555');
+        $entry = FirstReceipt::find($id);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(ShowFirstEntry::class, ['firstReceipt' => $entry])
+            ->assertSee('55555')          // draft/receipt no
+            ->assertSee('DDO Alpha')      // via the ddo relation
+            ->assertSee('DEDUCTION FOR JAN') // via the purpose relation
+            ->assertSee('Finalized');     // flag CR
     }
 }

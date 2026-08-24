@@ -98,6 +98,8 @@ class SidebarMenu
     private const ACTIVE_ALIASES = [
         'accounts.show' => 'accounts.index',
         'accounts.edit' => 'accounts.index',
+        'first-entries.show' => 'first-entries.index',
+        'first-entries.edit' => 'first-entries.index',
     ];
 
     /**
