@@ -150,6 +150,25 @@ class SubscriberTest extends TestCase
         $this->assertSame(2, Subscriber::query()->count());
     }
 
+    public function test_an_account_number_lookup_is_scoped_for_non_admins(): void
+    {
+        // This is exactly what CloseAccount / AssignPran / MigrateToUps do: find by account_no.
+        // A non-owner must NOT be able to reach another user's account by typing its number.
+        DB::table('allotment_accnt_no')->insert([
+            'id' => 20, 'name' => 'OP2 FINAL', 'account_no' => 'AP/NPS/09/9999', 'save_flag' => 'F',
+            'nameofdept' => '01', 'ddocode' => 589, 'designation' => 1, 'user_id' => 'op2',
+        ]);
+
+        $this->actingAs($this->makeUser('op1', 'S'));       // a different operator
+        $this->assertNull(Subscriber::where('account_no', 'AP/NPS/09/9999')->first());
+
+        $this->actingAs($this->makeUser('op2', 'S'));       // the owner
+        $this->assertNotNull(Subscriber::where('account_no', 'AP/NPS/09/9999')->first());
+
+        $this->actingAs($this->makeUser('boss', 'A'));      // an admin
+        $this->assertNotNull(Subscriber::where('account_no', 'AP/NPS/09/9999')->first());
+    }
+
     public function test_it_lists_a_subscriber_with_all_its_details(): void
     {
         $this->seedSubscribers();

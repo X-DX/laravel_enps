@@ -64,10 +64,13 @@ A non-owner can't even confirm the record exists. No extra `if` needed in the co
 - **404 vs 403 order.** A user with *no permission* who also doesn't own the record now hits the
   404 (binding) before the 403 (permission). The "forbidden" feature tests were updated to seed a
   record the acting user **owns**, so they still test the permission gate (403) in isolation.
-- **Cross-user operations are now per-user for non-admins.** Close Account, Assign PRAN and
-  Migrate-to-UPS search only the current user's accounts (admins still see all). If a workflow
-  needs a non-admin to act on another user's account, either make them admin or relax the scope
-  for that screen with `withoutGlobalScope`.
+- **Cross-user operations are per-user for non-admins — confirmed decision (2026-08-25).**
+  Close Account, Assign PRAN and Migrate-to-UPS search only the current user's accounts (admins
+  still see all). This is intentional and diverges from the legacy, whose by-account-number
+  lookups had no user filter. Locked in by
+  `SubscriberTest::test_an_account_number_lookup_is_scoped_for_non_admins`. If a workflow ever
+  needs a non-admin to act on another user's account, make them admin or relax that one screen
+  with `withoutGlobalScope`.
 - **Duplicate checks are per-user.** The First Register "duplicate draft" guard now only looks at
   the current user's own drafts — consistent with the isolation.
 
