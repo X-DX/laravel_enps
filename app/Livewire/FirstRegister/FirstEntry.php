@@ -167,10 +167,10 @@ class FirstEntry extends Component
             return;
         }
 
+        // user_id is stamped automatically by the OwnedByUser trait on the model.
         FirstReceipt::create(array_merge($data, [
             'date_of_entry' => now()->toDateString(),
             'flag' => 'T',
-            'user_id' => auth()->id(),
         ]));
 
         $this->reset();

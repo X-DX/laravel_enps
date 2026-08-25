@@ -151,7 +151,17 @@ class ShowSubscriberTest extends TestCase
 
     public function test_the_route_is_forbidden_without_the_permission(): void
     {
-        $this->actingAs($this->makeUser('staff', 'S'))->get('/accounts/1')->assertForbidden();
+        // Owned by the acting user so route-model binding resolves — this isolates the
+        // permission gate (403), not the per-user ownership scope (which would 404).
+        $staff = $this->makeUser('staff', 'S');
+        DB::table('allotment_accnt_no')->insert([
+            'id' => 3, 'name' => 'STAFF OWN', 'account_no' => 'AP/NPS/01/0003', 'save_flag' => 'F',
+            'nameofdept' => '01', 'ddocode' => 589, 'designation' => 1,
+            'pension_type' => 'N', 'pay' => 50000, 'starting_month' => '06', 'starting_fin_year' => 2011,
+            'name_nominee' => 'NOM', 'single_mother_flag' => 0, 'user_id' => 'staff', 'isactive' => true,
+        ]);
+
+        $this->actingAs($staff)->get('/accounts/3')->assertForbidden();
     }
 
     public function test_an_admin_can_open_a_subscriber(): void

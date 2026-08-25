@@ -21,12 +21,28 @@ class Dashboard extends Component
             return 0;
         }
 
-        $query = DB::table($table);
+        $query = $this->ownedTable($table);
         if ($filter) {
             $filter($query);
         }
 
         return $query->count();
+    }
+
+    /**
+     * A query builder for $table narrowed to the current user's rows (admins see everyone's),
+     * so the dashboard matches the per-user lists. Caller must have checked the table exists.
+     */
+    private function ownedTable(string $table): \Illuminate\Database\Query\Builder
+    {
+        $query = DB::table($table);
+
+        $user = auth()->user();
+        if ($user && ! $user->isAdmin() && Schema::hasColumn($table, 'user_id')) {
+            $query->where($table.'.user_id', $user->getAuthIdentifier());
+        }
+
+        return $query;
     }
 
     public function render()
@@ -46,7 +62,7 @@ class Dashboard extends Component
         // Top departments by subscriber count → the bar chart.
         $topDepartments = [];
         if (Schema::hasTable('allotment_accnt_no') && Schema::hasTable('department')) {
-            $topDepartments = DB::table('allotment_accnt_no')
+            $topDepartments = $this->ownedTable('allotment_accnt_no')
                 ->selectRaw('trim(nameofdept) as code, count(*) as total')
                 ->whereNotNull('nameofdept')
                 ->groupByRaw('trim(nameofdept)')

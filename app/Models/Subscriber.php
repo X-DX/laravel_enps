@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\OwnedByUser;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -17,6 +18,8 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class Subscriber extends Model
 {
+    use OwnedByUser;
+
     protected $fillable = [
         // typed by the operator
         'name',

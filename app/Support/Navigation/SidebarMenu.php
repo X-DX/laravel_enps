@@ -229,16 +229,33 @@ class SidebarMenu
     private function badgeFor(string $key): ?int
     {
         $count = match ($key) {
-            'entrysection.pending_issue_accounts' => Schema::hasTable('allotment_accnt_no')
-                ? DB::table('allotment_accnt_no')->where('save_flag', 'T')->count() : 0,
-            'entrysection.assign_pran_against_accounts' => Schema::hasTable('pran_no')
-                ? DB::table('pran_no')->where('save_flag', 'T')->count() : 0,
-            'entrysection.pending_first_entry' => Schema::hasTable('first_receipt')
-                ? DB::table('first_receipt')->where('flag', 'T')->count() : 0,
+            'entrysection.pending_issue_accounts' => $this->pendingCount('allotment_accnt_no', 'save_flag', 'T'),
+            'entrysection.assign_pran_against_accounts' => $this->pendingCount('pran_no', 'save_flag', 'T'),
+            'entrysection.pending_first_entry' => $this->pendingCount('first_receipt', 'flag', 'T'),
             default => 0,
         };
 
         return $count > 0 ? $count : null;
+    }
+
+    /**
+     * Count a pending worklist, scoped to the current user (admins see everyone's) so the badge
+     * always matches the per-user list it points at.
+     */
+    private function pendingCount(string $table, string $column, string $value): int
+    {
+        if (! Schema::hasTable($table)) {
+            return 0;
+        }
+
+        $query = DB::table($table)->where($column, $value);
+
+        $user = auth()->user();
+        if ($user && ! $user->isAdmin() && Schema::hasColumn($table, 'user_id')) {
+            $query->where('user_id', $user->getAuthIdentifier());
+        }
+
+        return $query->count();
     }
 
     /** Guess a sensible icon from a menu label / permission key (keyword based). */

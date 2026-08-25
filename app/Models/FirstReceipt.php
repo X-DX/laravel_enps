@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\OwnedByUser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  */
 class FirstReceipt extends Model
 {
+    use OwnedByUser;
+
     protected $table = 'first_receipt';
     protected $primaryKey = 'sl_no';
     public $timestamps = false;

@@ -151,7 +151,7 @@ class FirstRegisterTest extends TestCase
             ->set('purpose', 'D01');
     }
 
-    private function seedReceipt(string $flag = 'T', string $draftNo = '999', string $draftDate = '2024-02-01'): int
+    private function seedReceipt(string $flag = 'T', string $draftNo = '999', string $draftDate = '2024-02-01', string $userId = 'admin'): int
     {
         return DB::table('first_receipt')->insertGetId([
             'draft_no' => $draftNo,
@@ -167,7 +167,7 @@ class FirstRegisterTest extends TestCase
             'purpose' => 'D01',
             'contribution_type' => 'SC',
             'pension_type' => 'N',
-            'user_id' => 'admin',
+            'user_id' => $userId,
         ]);
     }
 
@@ -362,9 +362,12 @@ class FirstRegisterTest extends TestCase
 
     public function test_the_edit_route_is_forbidden_without_permission(): void
     {
-        $id = $this->seedReceipt();
+        // Owned by the acting user so route-model binding resolves — this isolates the
+        // permission gate (403), not the ownership scope (which would 404).
+        $staff = $this->makeUser('staff', 'S');
+        $id = $this->seedReceipt(userId: 'staff');
 
-        $this->actingAs($this->makeUser('staff', 'S'))->get("/first-register/{$id}/edit")->assertForbidden();
+        $this->actingAs($staff)->get("/first-register/{$id}/edit")->assertForbidden();
     }
 
     public function test_editing_a_pending_entry_updates_it(): void
@@ -388,9 +391,11 @@ class FirstRegisterTest extends TestCase
 
     public function test_the_detail_route_is_forbidden_without_permission(): void
     {
-        $id = $this->seedReceipt();
+        // Owned by the acting user so binding resolves — isolates the permission gate (403).
+        $staff = $this->makeUser('staff', 'S');
+        $id = $this->seedReceipt(userId: 'staff');
 
-        $this->actingAs($this->makeUser('staff', 'S'))->get("/first-register/{$id}")->assertForbidden();
+        $this->actingAs($staff)->get("/first-register/{$id}")->assertForbidden();
     }
 
     public function test_the_detail_page_shows_the_entry(): void
@@ -404,6 +409,34 @@ class FirstRegisterTest extends TestCase
             ->assertSee('DDO Alpha')      // via the ddo relation
             ->assertSee('CONTRIBUTION FOR JAN') // via the purpose relation
             ->assertSee('Pending at CR Generation'); // flag CR → 3-state label
+    }
+
+    public function test_entries_are_scoped_to_their_owner_for_non_admins(): void
+    {
+        $this->seedReceipt(flag: 'T', draftNo: 'MINE', userId: 'op1');
+        $this->seedReceipt(flag: 'T', draftNo: 'THEIRS', userId: 'op2');
+
+        // A non-admin operator sees only their own row.
+        $this->actingAs($this->makeUser('op1', 'S'));
+        $rows = FirstReceipt::query()->get();
+        $this->assertCount(1, $rows);
+        $this->assertSame('MINE', $rows->first()->draft_no);
+
+        // An admin sees everyone's.
+        $this->actingAs($this->makeUser('boss', 'A'));
+        $this->assertSame(2, FirstReceipt::query()->count());
+    }
+
+    public function test_a_new_entry_is_stamped_with_the_current_user(): void
+    {
+        // Admin role only so the component's authorize() passes; the point is the owner stamp.
+        $this->validForm(Livewire::actingAs($this->makeUser('op9', 'A'))->test(FirstEntry::class))
+            ->set('draftNo', '424242')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        // The trait auto-stamped the owner even though the form never sends user_id.
+        $this->assertSame('op9', DB::table('first_receipt')->where('draft_no', '424242')->value('user_id'));
     }
 
     public function test_finalized_status_filter_narrows_to_one_stage(): void

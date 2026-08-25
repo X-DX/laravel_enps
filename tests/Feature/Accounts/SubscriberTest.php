@@ -5,6 +5,7 @@ namespace Tests\Feature\Accounts;
 use App\Exports\SubscribersExport;
 use App\Livewire\Accounts\Subscribers;
 use App\Models\Permission;
+use App\Models\Subscriber;
 use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -82,6 +83,7 @@ class SubscriberTest extends TestCase
             $t->string('nameofdept')->nullable();
             $t->bigInteger('ddocode')->nullable();
             $t->bigInteger('designation')->nullable();
+            $t->string('user_id', 10)->nullable();
         });
 
         Permission::create(['key' => 'entrysection.view_all_accounts', 'name' => 'View All Accounts', 'group' => 'entrysection', 'legacy_menu_id' => 154]);
@@ -128,6 +130,24 @@ class SubscriberTest extends TestCase
     public function test_an_admin_can_open_the_screen(): void
     {
         $this->actingAs($this->makeUser('admin', 'A'))->get('/accounts')->assertOk()->assertSee('View All Accounts');
+    }
+
+    public function test_subscribers_are_scoped_to_their_owner_for_non_admins(): void
+    {
+        DB::table('allotment_accnt_no')->insert([
+            ['id' => 10, 'name' => 'OP1 ACCOUNT', 'account_no' => null, 'save_flag' => 'T', 'nameofdept' => '01', 'ddocode' => 589, 'designation' => 1, 'user_id' => 'op1'],
+            ['id' => 11, 'name' => 'OP2 ACCOUNT', 'account_no' => null, 'save_flag' => 'T', 'nameofdept' => '01', 'ddocode' => 589, 'designation' => 1, 'user_id' => 'op2'],
+        ]);
+
+        // A non-admin operator sees only their own account.
+        $this->actingAs($this->makeUser('op1', 'S'));
+        $rows = Subscriber::query()->get();
+        $this->assertCount(1, $rows);
+        $this->assertSame('OP1 ACCOUNT', $rows->first()->name);
+
+        // An admin sees everyone's.
+        $this->actingAs($this->makeUser('boss', 'A'));
+        $this->assertSame(2, Subscriber::query()->count());
     }
 
     public function test_it_lists_a_subscriber_with_all_its_details(): void

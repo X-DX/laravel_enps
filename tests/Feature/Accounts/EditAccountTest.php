@@ -177,9 +177,12 @@ class EditAccountTest extends TestCase
 
     public function test_the_edit_route_is_forbidden_without_the_permission(): void
     {
-        $sub = $this->seedSubscriber();
+        // Owned by the acting user so route-model binding resolves — this isolates the
+        // permission gate (403), not the per-user ownership scope (which would 404).
+        $staff = $this->makeUser('staff', 'S');
+        $sub = $this->seedSubscriber(['user_id' => 'staff']);
 
-        $this->actingAs($this->makeUser('staff', 'S'))->get("/accounts/{$sub->id}/edit")->assertForbidden();
+        $this->actingAs($staff)->get("/accounts/{$sub->id}/edit")->assertForbidden();
     }
 
     public function test_it_prefills_the_form_from_the_subscriber(): void

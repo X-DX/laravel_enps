@@ -36,6 +36,7 @@ This is the "why we did it this way" memory of the rebuild — read alongside
 | Landing page (`/`) | [landing-page.md](landing-page.md) | ✅ public entry page with dark mode, parallax, custom cursor |
 | UI refresh (icons · sidebar · dashboard) | [ui-refresh.md](ui-refresh.md) | ✅ icon system, collapsible icon-rail sidebar + mobile drawer, Livewire analytics dashboard, premium fonts/animations; then command palette, progress bar, live badges, breadcrumbs everywhere |
 | Migration to UPS (menu 161) | [migrate-to-ups.md](migrate-to-ups.md) | ✅ restored missing feature — data migration adds the menu item + permission; Livewire search → migrate NPS→UPS (guarded, transactional update + `ups_migration` log) — 164 tests |
+| Row-level ownership (per-user data) | [row-level-ownership.md](row-level-ownership.md) | ✅ cross-cutting — `OwnedByUser` trait + global scope on `Subscriber`/`FirstReceipt`; per-user lists/detail/export/badges/dashboard, admins see all; route-model binding 404s non-owners — 185 tests |
 
 ## Conventions
 
