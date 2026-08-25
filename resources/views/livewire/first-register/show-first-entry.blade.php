@@ -10,7 +10,7 @@
             ['Order / Letter Date', $entry->order_date?->format('d-m-Y')],
             ['DDO', $entry->ddo?->ddo_name],
             ['Draw Bank', $entry->bank ? trim($entry->bank->bank_name) . ' — ' . trim($entry->bank->branch_name) : null],
-            ['Purpose', $entry->purposeCode?->purpose ?? $entry->purpose],
+            ['Purpose', $entry->purposeLabel()],
             ['Contribution Type', $entry->contribution_type === 'SC' ? 'Single Contribution' : ($entry->contribution_type === 'DC' ? 'Double Contribution' : $entry->contribution_type)],
             ['Pension Type', $entry->pension_type === 'U' ? 'UPS' : 'NPS'],
             ['Type', $isDraft ? 'Draft' : 'Receipt'],

@@ -168,7 +168,7 @@
                         <td class="px-2 py-1.5 text-right font-medium text-slate-800 dark:text-slate-100">{{ number_format((float) $entry->amount, 2) }}</td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->contribution_type === 'SC' ? 'Single' : ($entry->contribution_type === 'DC' ? 'Double' : $entry->contribution_type) }}</td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $bankName ?? '—' }}</td>
-                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->purposeCode?->purpose ?? $entry->purpose }}</td>
+                        <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->purposeLabel() }}</td>
                         <td class="px-2 py-1.5">
                             <span class="inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $tones[$entry->statusTone()] }}">{{ $entry->statusLabel() }}</span>
                         </td>

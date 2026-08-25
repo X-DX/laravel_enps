@@ -31,6 +31,7 @@ class FirstReceipt extends Model
         'type',
         'draw_bank_code',
         'purpose',
+        'other_purpose',
         'contribution_type',
         'pension_type',
         'user_id',
@@ -60,6 +61,19 @@ class FirstReceipt extends Model
     public function purposeCode(): BelongsTo
     {
         return $this->belongsTo(Purpose::class, 'purpose', 'pid');
+    }
+
+    /**
+     * Human-readable purpose: the master label, or the operator's free text when "OTHERS".
+     * Used by the list, detail page, Excel and PDF so they all read the same.
+     */
+    public function purposeLabel(): string
+    {
+        if ($this->purpose === 'OTH') {
+            return $this->other_purpose ?: 'Others';
+        }
+
+        return $this->purposeCode?->purpose ?? (string) $this->purpose;
     }
 
     /**

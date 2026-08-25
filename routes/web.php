@@ -168,6 +168,7 @@ Route::middleware('auth')->group(function () {
             ->defaults('mode', 'finalized')
             ->name('first-entries.finalized');
 
+        // For Entry
         Route::get('/first-register/entry', FirstEntry::class)
             ->middleware('can:entrysection.entry_first_register')
             ->name('first-entries.entry');

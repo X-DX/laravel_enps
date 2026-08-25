@@ -31,8 +31,9 @@ class FirstEntry extends Component
     public string $amount = '';
     public string $contributionType = ''; // SC = single · DC = double
     public string $pensionType = 'N';     // N = NPS · U = UPS
-    public string $drawBankCode = '';
+    public string $drawBankCode = '';     // only for drafts (a draft is drawn on a bank)
     public string $purpose = '';          // purpose_master_codes.pid
+    public string $otherPurpose = '';     // free text, only when purpose = 'OTH'
 
     /** Revealed after a duplicate warning, so the operator can deliberately override. */
     public bool $showForceSave = false;
@@ -65,6 +66,7 @@ class FirstEntry extends Component
         $this->pensionType = $r->pension_type ?: 'N';
         $this->drawBankCode = (string) $r->draw_bank_code;
         $this->purpose = (string) $r->purpose;
+        $this->otherPurpose = (string) $r->other_purpose;
     }
 
     /** Treasury Location changed → clear the (now-stale) DDO; its list refills below. */
@@ -77,6 +79,21 @@ class FirstEntry extends Component
     public function updatedIsDraft(): void
     {
         $this->contributionType = $this->isDraft ? 'DC' : '';
+
+        // Draw bank only applies to a draft; drop it (and its error) when unticked.
+        if (! $this->isDraft) {
+            $this->drawBankCode = '';
+            $this->resetErrorBag('drawBankCode');
+        }
+    }
+
+    /** "OTHERS" reveals a free-text box; any other purpose clears it. */
+    public function updatedPurpose(): void
+    {
+        if ($this->purpose !== 'OTH') {
+            $this->otherPurpose = '';
+            $this->resetErrorBag('otherPurpose');
+        }
     }
 
     protected function rules(): array
@@ -91,8 +108,11 @@ class FirstEntry extends Component
             'amount' => ['required', 'numeric', 'min:1'],
             'contributionType' => ['required', 'in:SC,DC'],
             'pensionType' => ['required', 'in:N,U'],
-            'drawBankCode' => ['required', 'exists:bank_master,bank_code'],
+            // A bank only applies to a draft; required then, ignored for a receipt.
+            'drawBankCode' => $this->isDraft ? ['required', 'exists:bank_master,bank_code'] : ['nullable'],
             'purpose' => ['required', 'exists:purpose_master_codes,pid'],
+            // Free-text description required only when the purpose is "OTHERS".
+            'otherPurpose' => $this->purpose === 'OTH' ? ['required', 'string', 'max:150'] : ['nullable'],
         ];
     }
 
@@ -104,6 +124,7 @@ class FirstEntry extends Component
             'contributionType.required' => 'Select the contribution type.',
             'drawBankCode.required' => 'Select the draw bank.',
             'purpose.required' => 'Select a purpose.',
+            'otherPurpose.required' => 'Describe the purpose.',
         ];
     }
 
@@ -132,8 +153,9 @@ class FirstEntry extends Component
             'amount' => $this->amount,
             'ddocode' => (int) $this->ddocode,
             'type' => $this->isDraft ? 'D' : 'R',
-            'draw_bank_code' => (int) $this->drawBankCode,
+            'draw_bank_code' => $this->isDraft && $this->drawBankCode !== '' ? (int) $this->drawBankCode : null,
             'purpose' => $this->purpose,
+            'other_purpose' => $this->purpose === 'OTH' ? $this->otherPurpose : null,
             'contribution_type' => $this->contributionType,
             'pension_type' => $this->pensionType,
         ];

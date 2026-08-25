@@ -54,7 +54,7 @@
                     <td class="r">{{ number_format((float) $r->amount, 2) }}</td>
                     <td>{{ $r->contribution_type === 'SC' ? 'Single' : ($r->contribution_type === 'DC' ? 'Double' : $r->contribution_type) }}</td>
                     <td>{{ $r->bank ? trim($r->bank->bank_name) . ', ' . trim($r->bank->branch_name) : '—' }}</td>
-                    <td>{{ $r->purposeCode?->purpose ?? $r->purpose }}</td>
+                    <td>{{ $r->purposeLabel() }}</td>
                     <td>{{ $r->statusLabel() }}</td>
                 </tr>
             @empty

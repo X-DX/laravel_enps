@@ -49,7 +49,7 @@ class FirstEntriesExport implements FromQuery, WithHeadings, WithMapping
             number_format((float) $r->amount, 2, '.', ''),
             $r->contribution_type === 'SC' ? 'Single' : ($r->contribution_type === 'DC' ? 'Double' : $r->contribution_type),
             $r->bank ? trim($r->bank->bank_name) . ' - ' . trim($r->bank->branch_name) : null,
-            $r->purposeCode?->purpose,
+            $r->purposeLabel(),
             $r->statusLabel(),
         ];
     }

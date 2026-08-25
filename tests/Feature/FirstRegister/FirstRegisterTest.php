@@ -101,6 +101,7 @@ class FirstRegisterTest extends TestCase
             $t->char('type', 1)->nullable();
             $t->bigInteger('draw_bank_code')->nullable();
             $t->string('purpose', 10)->nullable();
+            $t->string('other_purpose', 150)->nullable();
             $t->char('contribution_type', 2)->nullable();
             $t->char('pension_type', 1)->nullable();
             $t->string('user_id')->nullable();
@@ -112,7 +113,8 @@ class FirstRegisterTest extends TestCase
         Permission::create(['key' => 'entrysection.pending_first_entry', 'name' => 'Pending First Entry', 'group' => 'entrysection', 'legacy_menu_id' => 173]);
         Permission::create(['key' => 'entrysection.finalized_first_entry', 'name' => 'Finalized First Entry', 'group' => 'entrysection', 'legacy_menu_id' => 174]);
 
-        DB::table('purpose_master_codes')->insert(['pid' => 'D01', 'purpose' => 'DEDUCTION FOR JAN']);
+        DB::table('purpose_master_codes')->insert(['pid' => 'D01', 'purpose' => 'CONTRIBUTION FOR JAN']);
+        DB::table('purpose_master_codes')->insert(['pid' => 'OTH', 'purpose' => 'OTHERS']);
         DB::table('bank_master')->insert(['bank_code' => 10, 'bank_name' => 'SBI', 'branch_name' => 'Main']);
         DB::table('loc_master')->insert(['loc_code' => 1, 'loc_name' => 'Itanagar']);
         DB::table('treasury_master')->insert(['treasury_code' => '01', 'treasury_name' => 'Itanagar Treasury']);
@@ -215,10 +217,58 @@ class FirstRegisterTest extends TestCase
             'type' => 'R',            // isDraft = false → Receipt
             'contribution_type' => 'SC',
             'pension_type' => 'N',
-            'draw_bank_code' => 10,
+            'draw_bank_code' => null, // a receipt has no draw bank
             'purpose' => 'D01',
             'flag' => 'T',            // pending
             'user_id' => 'admin',
+        ]);
+    }
+
+    public function test_draw_bank_is_required_only_for_a_draft(): void
+    {
+        $user = $this->makeUser('admin', 'A');
+
+        // A draft with no bank fails validation.
+        $this->validForm(Livewire::actingAs($user)->test(FirstEntry::class))
+            ->set('isDraft', true)
+            ->set('drawBankCode', '')
+            ->call('save')
+            ->assertHasErrors(['drawBankCode']);
+
+        // A draft with a bank saves it, as type 'D'.
+        $this->validForm(Livewire::actingAs($user)->test(FirstEntry::class))
+            ->set('isDraft', true)
+            ->set('drawBankCode', '10')
+            ->set('draftNo', '777001')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('first_receipt', ['draft_no' => '777001', 'type' => 'D', 'draw_bank_code' => 10]);
+    }
+
+    public function test_others_purpose_requires_and_stores_the_free_text(): void
+    {
+        $user = $this->makeUser('admin', 'A');
+
+        // OTHERS with no description fails.
+        $this->validForm(Livewire::actingAs($user)->test(FirstEntry::class))
+            ->set('purpose', 'OTH')
+            ->set('otherPurpose', '')
+            ->call('save')
+            ->assertHasErrors(['otherPurpose']);
+
+        // OTHERS with a description stores both the code and the text.
+        $this->validForm(Livewire::actingAs($user)->test(FirstEntry::class))
+            ->set('purpose', 'OTH')
+            ->set('otherPurpose', 'Festival advance recovery')
+            ->set('draftNo', '888001')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('first_receipt', [
+            'draft_no' => '888001',
+            'purpose' => 'OTH',
+            'other_purpose' => 'Festival advance recovery',
         ]);
     }
 
@@ -352,7 +402,7 @@ class FirstRegisterTest extends TestCase
             ->test(ShowFirstEntry::class, ['firstReceipt' => $entry])
             ->assertSee('55555')          // draft/receipt no
             ->assertSee('DDO Alpha')      // via the ddo relation
-            ->assertSee('DEDUCTION FOR JAN') // via the purpose relation
+            ->assertSee('CONTRIBUTION FOR JAN') // via the purpose relation
             ->assertSee('Pending at CR Generation'); // flag CR → 3-state label
     }
 
