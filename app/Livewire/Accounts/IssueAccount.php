@@ -198,7 +198,7 @@ class IssueAccount extends Component
             // set by the system (matches the legacy insert exactly)
             'save_flag' => 'T',
             'entry_date' => now()->toDateString(),
-            'user_id' => auth()->id(),
+            // user_id is stamped automatically by the OwnedByUser trait on the model.
             'flag_pt' => 'N',
             'closure_reason_id' => 0,
             'isactive' => true,
