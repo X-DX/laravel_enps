@@ -18,6 +18,8 @@ use Tests\TestCase;
  */
 class AssignPranTest extends TestCase
 {
+    private const ABILITY = 'entrysection.assign_pran_against_accounts';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -87,6 +89,7 @@ class AssignPranTest extends TestCase
             $t->string('nameofdept')->nullable();
             $t->bigInteger('ddocode')->nullable();
             $t->bigInteger('designation')->nullable();
+            $t->string('user_id', 10)->nullable();   // the ownership column — without it the scope can never fire
         });
         Schema::create('pran_no', function (Blueprint $t) {
             $t->string('account_no')->primary();
@@ -101,7 +104,7 @@ class AssignPranTest extends TestCase
             $t->integer('is_active')->nullable();
         });
 
-        Permission::create(['key' => 'entrysection.assign_pran_against_accounts', 'name' => 'Assign Pran Against Accounts', 'group' => 'entrysection', 'legacy_menu_id' => 157]);
+        Permission::create(['key' => self::ABILITY, 'name' => 'Assign Pran Against Accounts', 'group' => 'entrysection', 'legacy_menu_id' => 157]);
 
         DB::table('designation_master')->insert(['designation_id' => 1, 'designation' => 'L.D.C']);
         DB::table('department')->insert(['dept_code' => '15', 'dept_name' => 'AP/HEALTH']);
@@ -124,7 +127,11 @@ class AssignPranTest extends TestCase
         return User::find($userId);
     }
 
-    private function seedAccount(?string $accountNo, string $name = 'PONDITA MODI', string $saveFlag = 'F', bool $isactive = true): void
+    /**
+     * Seed an account. `userId` defaults to null on purpose: 17,790 migrated rows carry no
+     * owner, so that is the realistic case a non-admin operator must still be able to work with.
+     */
+    private function seedAccount(?string $accountNo, string $name = 'PONDITA MODI', string $saveFlag = 'F', bool $isactive = true, ?string $userId = null): void
     {
         DB::table('allotment_accnt_no')->insert([
             'name' => $name,
@@ -135,7 +142,21 @@ class AssignPranTest extends TestCase
             'nameofdept' => '15',
             'ddocode' => 2,
             'designation' => 1,
+            'user_id' => $userId,
         ]);
+    }
+
+    /** A plain operator (role 'S') holding the screen's permission directly. */
+    private function makeOperator(string $userId = 'operator'): User
+    {
+        $user = $this->makeUser($userId, 'S');
+
+        DB::table('user_permission')->insert([
+            'user_id' => $userId,
+            'permission_id' => Permission::where('key', self::ABILITY)->value('id'),
+        ]);
+
+        return $user;
     }
 
     private function seedPran(string $accountNo, string $saveFlag = 'T', int $pran = 110016825057): void
@@ -323,5 +344,66 @@ class AssignPranTest extends TestCase
             ->test(AssignPran::class)
             ->call('toggleSelectAll')
             ->assertSet('selected', ['AP/NPS/15/0001', 'AP/NPS/15/0002']);
+    }
+
+    /* ---- cross-operator visibility (regression: every test above acts as an ADMIN, who
+       bypasses OwnedByUserScope — so none of them could ever catch the scope leaking into
+       this screen and blanking the account columns) ---- */
+
+    public function test_the_pending_list_shows_account_details_to_a_non_admin_operator(): void
+    {
+        $this->seedAccount('AP/NPS/15/0001', 'ODI TAMIN', userId: 'someoneelse');
+        $this->seedAccount('AP/NPS/15/0002', 'LEMGE PANSA', userId: null);   // migrated, owner-less
+        $this->seedPran('AP/NPS/15/0001', saveFlag: 'T', pran: 110016825057);
+        $this->seedPran('AP/NPS/15/0002', saveFlag: 'T', pran: 110034821858);
+
+        Livewire::actingAs($this->makeOperator())
+            ->test(AssignPran::class)
+            ->assertSee('ODI TAMIN')       // owned by another operator
+            ->assertSee('LEMGE PANSA')     // owned by nobody
+            ->assertSee('L.D.C')           // designation, via subscriber.designationMaster
+            ->assertSee('DDO Alpha')       // ddo, via subscriber.ddo
+            ->assertSee('AP/HEALTH');      // department, resolved from nameofdept
+    }
+
+    public function test_a_non_admin_operator_can_search_an_account_owned_by_someone_else(): void
+    {
+        $this->seedAccount('AP/NPS/15/0001', 'ODI TAMIN', userId: 'someoneelse');
+
+        Livewire::actingAs($this->makeOperator())
+            ->test(AssignPran::class)
+            ->set('search', 'odi')
+            ->assertSee('AP/NPS/15/0001')
+            ->assertSee('ODI TAMIN');
+    }
+
+    public function test_a_non_admin_operator_can_assign_a_pran_to_another_operators_account(): void
+    {
+        $this->seedAccount('AP/NPS/15/0001', 'ODI TAMIN', userId: 'someoneelse');
+
+        Livewire::actingAs($this->makeOperator())
+            ->test(AssignPran::class)
+            ->call('selectAccount', 'AP/NPS/15/0001')
+            ->assertSet('selectedAccountNo', 'AP/NPS/15/0001')
+            ->set('pranNo', '110016825057')->set('confirmPranNo', '110016825057')
+            ->set('pranAllotmentDate', '2024-01-01')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('pran_no', [
+            'account_no' => 'AP/NPS/15/0001',
+            'pran_no' => 110016825057,
+            'user_id' => 'operator',   // the PRAN records who assigned it, the account keeps its own owner
+        ]);
+    }
+
+    public function test_a_closed_account_is_still_rejected_for_a_non_admin_operator(): void
+    {
+        $this->seedAccount('AP/NPS/15/0009', isactive: false, userId: 'someoneelse');
+
+        Livewire::actingAs($this->makeOperator())
+            ->test(AssignPran::class)
+            ->call('selectAccount', 'AP/NPS/15/0009')
+            ->assertSet('selectedAccountNo', '');   // lifting ownership must NOT lift the status rules
     }
 }

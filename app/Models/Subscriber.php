@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\OwnedByUser;
+use App\Models\Scopes\OwnedByUserScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -121,5 +122,27 @@ class Subscriber extends Model
                         ->orWhereRaw('LOWER(account_no) LIKE ?', [$term]);
                 });
             });
+    }
+
+    /**
+     * Lift row-level ownership: a DELIBERATE cross-operator query.
+     *
+     * Used by the per-account action screens (Assign PRAN, Close Account, Migrate to UPS). These
+     * are nodal-office tasks on live accounts, and the legacy never filtered them by user
+     * (IssueAccountModel::issue_account_list_query, IssueAccountModel::closeAccountNo,
+     * UpsMigrationModel::getAccount). Ownership would also hide the ~17,400 migrated accounts
+     * that carry no user_id at all — invisible to every non-admin, forever.
+     *
+     * Grep for `acrossOperators()` to audit every place ownership is intentionally lifted.
+     */
+    public function scopeAcrossOperators(Builder $query): Builder
+    {
+        return $query->withoutGlobalScope(OwnedByUserScope::class);
+    }
+
+    /** Finalized (not a draft) and still open (not closed) — a live account. */
+    public function scopeOpenFinalized(Builder $query): Builder
+    {
+        return $query->where('save_flag', 'F')->where('isactive', true);
     }
 }

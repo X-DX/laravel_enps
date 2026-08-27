@@ -11,6 +11,8 @@ Each record now **belongs to the user who created it**. A user sees only their o
 
 - User1's entries are invisible to User2, and vice-versa.
 - This holds on **every** screen: lists, search, Excel, PDF, the detail page, the edit page, finalize/delete, the sidebar "pending" badges, and the dashboard numbers.
+  **Exception:** the three per-account action screens (Assign PRAN, Close Account,
+  Migrate to UPS) are cross-operator — see *Consequences* below.
 - **Admins** (`role_flag = 'A'`, i.e. `User::isAdmin()`) are the one exception — they see everyone's rows.
 
 ## Why
@@ -64,15 +66,74 @@ A non-owner can't even confirm the record exists. No extra `if` needed in the co
 - **404 vs 403 order.** A user with *no permission* who also doesn't own the record now hits the
   404 (binding) before the 403 (permission). The "forbidden" feature tests were updated to seed a
   record the acting user **owns**, so they still test the permission gate (403) in isolation.
-- **Cross-user operations are per-user for non-admins — confirmed decision (2026-08-25).**
-  Close Account, Assign PRAN and Migrate-to-UPS search only the current user's accounts (admins
-  still see all). This is intentional and diverges from the legacy, whose by-account-number
-  lookups had no user filter. Locked in by
-  `SubscriberTest::test_an_account_number_lookup_is_scoped_for_non_admins`. If a workflow ever
-  needs a non-admin to act on another user's account, make them admin or relax that one screen
-  with `withoutGlobalScope`.
+- **Browse/edit stays per-user; the per-account ACTION screens are cross-operator
+  (reversed decision, 2026-08-25).**
+
+  Still scoped (a plain `Subscriber::` query): the Account Register list, the detail page, Edit,
+  the command palette, the Excel export. Locked in by
+  `SubscriberTest::test_an_account_number_lookup_is_scoped_for_non_admins`.
+
+  Lifted via `Subscriber::acrossOperators()`: **Assign PRAN, Close Account, Migrate to UPS**.
+  Three reasons:
+  1. **Lookups were resolving to `null`.** `pran_no.subscriber` and `account_closure.subscriber`
+     are foreign-key lookups, not lists. The scope blanked Name / DOB / Department / Designation /
+     DDO in the pending-PRAN table and the Name column of the closed register — plus both screens'
+     Excel and PDF exports. It also broke `AccountClosure::scopeSearch()`, which searches by
+     holder name through `whereHas('subscriber')`.
+  2. **~17,400 migrated accounts carry no `user_id` at all** — invisible to every non-admin
+     forever. A scoped search returned 0 of 29,357 finalized accounts; the account dropdown on
+     Close Account came back empty.
+  3. **The guarded mass UPDATEs silently did nothing.** Global scopes apply to `update()` too, so
+     `close()` and `migrate()` flipped 0 rows and reported "already closed" / "could not migrate"
+     while nothing had happened. That is the worst failure mode of the three: a no-op that looks
+     like a business-rule rejection.
+
+  The legacy never filtered any of the three by user — `IssueAccountModel::issue_account_list_query`,
+  `IssueAccountModel::closeAccountNo`, `UpsMigrationModel::getAccount`.
+
+### How the lift is expressed
+
+Two small composable scopes on `Subscriber`, rather than one scope per screen:
+
+```php
+Subscriber::acrossOperators()   // lifts ownership — the auditable marker
+    ->openFinalized()           // save_flag='F' AND isactive — a live account
+    ->where('account_no', $no)
+    ->first();
+```
+
+`acrossOperators()` names the *decision*, not a screen, so **`grep -rn "acrossOperators()" app/`
+lists every place ownership is intentionally lifted** — currently 12 call sites across the three
+action screens. A bare `withoutGlobalScope()` scattered through components would read as someone
+disabling a security check, and would not be greppable as one concept.
+
+`openFinalized()` is a plain status filter with no ownership meaning, reusable where ownership
+*should* still apply.
+
+Relationship lifts are inline on the relation itself (`PranNo::subscriber()`,
+`AccountClosure::subscriber()`) — see the rule below.
+
 - **Duplicate checks are per-user.** The First Register "duplicate draft" guard now only looks at
   the current user's own drafts — consistent with the isolation.
+
+---
+
+## The rule this taught us
+
+> **Ownership scopes belong on lists you browse, never on relations you resolve.**
+
+A *list* answers "what are my records?" — filtering is the point.
+A *relation* answers "what row does this foreign key point at?" — filtering is a bug.
+
+A `belongsTo` that returns `null` because of who is logged in is not a security feature: the
+parent row already decided what may be shown. Apply `withoutGlobalScope(OwnedByUserScope::class)`
+to any relationship that crosses into an owned model.
+
+Note that `Relation::__call` returns the relation (not the raw builder) when a forwarded call
+returns the builder, so `->withoutGlobalScope(...)` on a `belongsTo` keeps the `BelongsTo`
+return type intact.
+
+---
 
 ## Verification
 
@@ -81,7 +142,22 @@ A non-owner can't even confirm the record exists. No extra `if` needed in the co
   - `FirstRegisterTest::test_a_new_entry_is_stamped_with_the_current_user`
   - `SubscriberTest::test_subscribers_are_scoped_to_their_owner_for_non_admins`
 - Updated 4 "forbidden" tests to own the record so they still assert **403**.
-- Full suite: **185 passing**.
+- Cross-operator carve-out — 11 tests, all acting as a **non-admin** operator, which is what the
+  original tests never did. Every functional test on all three screens acted as an admin, who
+  bypasses the scope, so the suite stayed green while the screens were broken:
+  - `AssignPranTest` — pending list shows account details; search finds another operator's
+    account; a non-admin can assign a PRAN to one; a closed account is still rejected.
+  - `CloseAccountTest` — a non-admin can select and close another operator's account; an
+    owner-less migrated account is still closable; the closed register shows holder names and is
+    searchable by name; a closed account is still rejected.
+  - `MigrateToUpsTest` — a non-admin can search and migrate another operator's account; an
+    owner-less account is still migratable; the pension-type and draft rules still apply.
+- Each carve-out test was verified to **fail without the fix** — reverting the two lifts turns 8
+  of them red. A regression test that passes either way is decoration.
+- **None of the three test files had a `user_id` column** on their `allotment_accnt_no` schema,
+  so the scope could not fire there even in principle. Added to all three — a scope you cannot
+  trigger is a scope you cannot test.
+- Full suite: **185 → 197 passing**.
 
 ## Gotchas
 

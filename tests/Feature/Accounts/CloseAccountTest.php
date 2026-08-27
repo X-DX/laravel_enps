@@ -18,6 +18,8 @@ use Tests\TestCase;
  */
 class CloseAccountTest extends TestCase
 {
+    private const ABILITY = 'entrysection.close_account';
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -87,6 +89,7 @@ class CloseAccountTest extends TestCase
             $t->char('pension_type', 1)->nullable();
             $t->bigInteger('closure_reason_id')->default(0);
             $t->boolean('isactive')->default(true);
+            $t->string('user_id', 10)->nullable();   // the ownership column
         });
         Schema::create('account_closure', function (Blueprint $t) {
             $t->string('account_no', 30)->primary();
@@ -98,7 +101,7 @@ class CloseAccountTest extends TestCase
             $t->timestamp('created_at')->nullable();
         });
 
-        Permission::create(['key' => 'entrysection.close_account', 'name' => 'Close Account', 'group' => 'entrysection', 'legacy_menu_id' => 234]);
+        Permission::create(['key' => self::ABILITY, 'name' => 'Close Account', 'group' => 'entrysection', 'legacy_menu_id' => 234]);
 
         DB::table('m_closure_reason')->insert([
             ['id' => 1, 'reason' => 'Death Case'],
@@ -123,7 +126,7 @@ class CloseAccountTest extends TestCase
         return User::find($userId);
     }
 
-    private function seedFinalized(string $accountNo, string $name = 'PONDITA MODI', bool $isactive = true): int
+    private function seedFinalized(string $accountNo, string $name = 'PONDITA MODI', bool $isactive = true, ?string $userId = null): int
     {
         return DB::table('allotment_accnt_no')->insertGetId([
             'name' => $name,
@@ -134,7 +137,21 @@ class CloseAccountTest extends TestCase
             'pension_type' => 'N',
             'closure_reason_id' => 0,
             'isactive' => $isactive,
+            'user_id' => $userId,
         ]);
+    }
+
+    /** A plain operator (role 'S') holding the screen's permission directly. */
+    private function makeOperator(string $userId = 'operator'): User
+    {
+        $user = $this->makeUser($userId, 'S');
+
+        DB::table('user_permission')->insert([
+            'user_id' => $userId,
+            'permission_id' => Permission::where('key', self::ABILITY)->value('id'),
+        ]);
+
+        return $user;
     }
 
     public function test_the_route_is_forbidden_without_the_permission(): void
@@ -233,5 +250,87 @@ class CloseAccountTest extends TestCase
             ->assertSee('AP/NPS/15/0009')
             ->assertSee('CLOSED PERSON')
             ->assertSee('Death Case');
+    }
+
+    /* ---- cross-operator access (regression). Every test above acts as an ADMIN, who bypasses
+       OwnedByUserScope, so none of them could catch the scope emptying the account dropdown,
+       blanking the closed register's Name column, or making close() a silent no-op. ---- */
+
+    public function test_a_non_admin_operator_can_select_and_close_another_operators_account(): void
+    {
+        $id = $this->seedFinalized('AP/NPS/15/0001', 'ODI TAMIN', userId: 'someoneelse');
+        DB::table('pran_no')->insert(['account_no' => 'AP/NPS/15/0001', 'pran_no' => 110016825057]);
+
+        Livewire::actingAs($this->makeOperator())
+            ->test(CloseAccount::class)
+            ->set('departmentCode', '15')
+            // the dropdown is JSON-encoded into an Alpine attribute (slashes escaped), so assert
+            // on the view data rather than the rendered HTML
+            ->assertViewHas('accountOptions', fn($o) => collect($o)->pluck('value')->contains('AP/NPS/15/0001'))
+            ->set('accountNo', 'AP/NPS/15/0001')
+            ->assertSet('name', 'ODI TAMIN')       // the lookup resolved
+            ->assertSet('pranNo', '110016825057')
+            ->set('closeReason', '1')
+            ->set('closingDate', '2026-08-14')
+            ->set('lastContributionMonth', '8')
+            ->set('lastContributionYear', '2026')
+            ->call('close')
+            ->assertHasNoErrors()
+            ->assertSet('accountNo', '');
+
+        // the guarded mass UPDATE is scoped too — without the lift it flips 0 rows and the
+        // component reports "already closed" while nothing happened.
+        $this->assertDatabaseHas('allotment_accnt_no', ['id' => $id, 'isactive' => false]);
+        $this->assertDatabaseHas('account_closure', [
+            'account_no' => 'AP/NPS/15/0001',
+            'closed_by' => 'operator',   // who closed it; the account keeps its own owner
+        ]);
+    }
+
+    public function test_an_owner_less_migrated_account_is_still_closable(): void
+    {
+        // 17,379 migrated accounts carry no owner — invisible to every non-admin while scoped.
+        $id = $this->seedFinalized('AP/NPS/15/0002', 'LEMGE PANSA', userId: null);
+
+        Livewire::actingAs($this->makeOperator())
+            ->test(CloseAccount::class)
+            ->set('departmentCode', '15')
+            ->set('accountNo', 'AP/NPS/15/0002')
+            ->assertSet('name', 'LEMGE PANSA')
+            ->set('closeReason', '2')
+            ->set('closingDate', '2026-08-14')
+            ->set('lastContributionMonth', '8')
+            ->set('lastContributionYear', '2026')
+            ->call('close')
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('allotment_accnt_no', ['id' => $id, 'isactive' => false]);
+    }
+
+    public function test_the_closed_register_shows_holder_names_and_is_searchable_by_name_for_a_non_admin(): void
+    {
+        $this->seedFinalized('AP/NPS/15/0009', 'CLOSED PERSON', isactive: false, userId: 'someoneelse');
+        DB::table('account_closure')->insert([
+            'account_no' => 'AP/NPS/15/0009', 'closure_reason_id' => 1, 'closing_date' => '2026-08-14',
+            'last_contribution_month' => 8, 'last_contribution_year' => 2026, 'closed_by' => 'someoneelse',
+        ]);
+
+        Livewire::actingAs($this->makeOperator())
+            ->test(CloseAccount::class)
+            ->assertSee('CLOSED PERSON')                    // AccountClosure::subscriber() lookup
+            ->set('closedSearch', 'closed per')
+            ->assertSee('AP/NPS/15/0009');                  // scopeSearch()'s whereHas('subscriber')
+    }
+
+    public function test_a_closed_account_is_still_rejected_for_a_non_admin_operator(): void
+    {
+        $this->seedFinalized('AP/NPS/15/0003', isactive: false, userId: 'someoneelse');
+
+        Livewire::actingAs($this->makeOperator())
+            ->test(CloseAccount::class)
+            ->set('departmentCode', '15')
+            ->set('accountNo', 'AP/NPS/15/0003')
+            ->assertSet('accountNo', '')     // lifting ownership must NOT lift the status rules
+            ->assertSet('name', '');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\OwnedByUserScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -38,10 +39,17 @@ class AccountClosure extends Model
         return $this->belongsTo(ClosureReason::class, 'closure_reason_id', 'id');
     }
 
-    /** The account this closure belongs to (account_no → allotment_accnt_no.account_no). */
+    /**
+     * The account this closure belongs to (account_no → allotment_accnt_no.account_no).
+     *
+     * Ownership is lifted on purpose: a foreign-key LOOKUP must not depend on who is logged in.
+     * This also fixes scopeSearch() below — whereHas() builds its subquery from this relation,
+     * so searching the closed register by holder name works for every operator.
+     */
     public function subscriber(): BelongsTo
     {
-        return $this->belongsTo(Subscriber::class, 'account_no', 'account_no');
+        return $this->belongsTo(Subscriber::class, 'account_no', 'account_no')
+            ->withoutGlobalScope(OwnedByUserScope::class);
     }
 
     /** Search the closed register by account number or the holder's name. */

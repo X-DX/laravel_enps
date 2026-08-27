@@ -60,9 +60,9 @@ class CloseAccount extends Component
             return;
         }
 
-        $account = Subscriber::with('pran')
-            ->where('save_flag', 'F')
-            ->where('isactive', true)
+        $account = Subscriber::acrossOperators()
+            ->openFinalized()
+            ->with('pran')
             ->where('account_no', $this->accountNo)
             ->first();
 
@@ -104,9 +104,9 @@ class CloseAccount extends Component
         // Both steps commit together or not at all.
         $closed = DB::transaction(function () {
             // Guard: only a still-open account is closed — never twice.
-            $updated = Subscriber::where('account_no', $this->accountNo)
-                ->where('save_flag', 'F')
-                ->where('isactive', true)
+            $updated = Subscriber::acrossOperators()
+                ->openFinalized()
+                ->where('account_no', $this->accountNo)
                 ->update(['isactive' => false]);
 
             if ($updated === 0) {
@@ -166,9 +166,8 @@ class CloseAccount extends Component
         // Active, finalized accounts in the chosen department → the Account No dropdown.
         $accountOptions = $this->departmentCode === ''
             ? []
-            : Subscriber::query()
-            ->where('save_flag', 'F')
-            ->where('isactive', true)
+            : Subscriber::acrossOperators()
+            ->openFinalized()
             ->whereRaw('trim(nameofdept) = ?', [trim($this->departmentCode)])
             ->orderBy('account_no')
             ->pluck('account_no')

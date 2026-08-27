@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\OwnedByUserScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -36,9 +37,16 @@ class PranNo extends Model
         'finalize_date' => 'date',
     ];
 
-    /** The account this PRAN belongs to (account_no → allotment_accnt_no.account_no). */
+    /**
+     * The account this PRAN belongs to (account_no → allotment_accnt_no.account_no).
+     *
+     * The ownership scope is lifted on purpose: this is a foreign-key LOOKUP, not a list of
+     * someone's records. A belongsTo that returns null because of who is logged in is a bug,
+     * not a security feature — the PRAN row itself already decided what may be shown.
+     */
     public function subscriber(): BelongsTo
     {
-        return $this->belongsTo(Subscriber::class, 'account_no', 'account_no');
+        return $this->belongsTo(Subscriber::class, 'account_no', 'account_no')
+            ->withoutGlobalScope(OwnedByUserScope::class);
     }
 }

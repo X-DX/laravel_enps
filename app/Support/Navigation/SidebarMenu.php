@@ -88,6 +88,8 @@ class SidebarMenu
         'entrysection.pending_first_entry' => 'first-entries.pending',
         'entrysection.finalized_first_entry' => 'first-entries.finalized',
 
+        'entrysection.entry_cr' => 'central-register.entry',
+
 
     ];
 

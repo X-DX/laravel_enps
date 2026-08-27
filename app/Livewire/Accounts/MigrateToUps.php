@@ -29,9 +29,9 @@ class MigrateToUps extends Component
 
     public function selectAccount(string $accountNo): void
     {
-        $account = Subscriber::where('account_no', $accountNo)
-            ->where('save_flag', 'F')
-            ->where('isactive', true)
+        $account = Subscriber::acrossOperators()
+            ->openFinalized()
+            ->where('account_no', $accountNo)
             ->first();
 
         if ($account === null) {
@@ -69,9 +69,9 @@ class MigrateToUps extends Component
             'migrationMonth.required' => 'Select the migration month.',
         ]);
 
-        $account = Subscriber::where('account_no', $this->selectedAccountNo)
-            ->where('save_flag', 'F')
-            ->where('isactive', true)
+        $account = Subscriber::acrossOperators()
+            ->openFinalized()
+            ->where('account_no', $this->selectedAccountNo)
             ->first();
 
         if ($account === null) {
@@ -89,7 +89,8 @@ class MigrateToUps extends Component
 
         // Both writes commit together. The WHERE pension_type='N' guard stops a double migrate.
         $migrated = DB::transaction(function () {
-            $updated = Subscriber::where('account_no', $this->selectedAccountNo)
+            $updated = Subscriber::acrossOperators()
+                ->where('account_no', $this->selectedAccountNo)
                 ->where('pension_type', 'N')
                 ->update(['pension_type' => 'U']);
 
@@ -123,12 +124,13 @@ class MigrateToUps extends Component
         $account = null;
 
         if ($this->selectedAccountNo !== '') {
-            $account = Subscriber::where('account_no', $this->selectedAccountNo)->first();
+            $account = Subscriber::acrossOperators()
+                ->where('account_no', $this->selectedAccountNo)
+                ->first();
         } elseif (trim($this->search) !== '') {
             $term = '%' . strtolower($this->search) . '%';
-            $results = Subscriber::query()
-                ->where('save_flag', 'F')
-                ->where('isactive', true)
+            $results = Subscriber::acrossOperators()
+                ->openFinalized()
                 ->where(function ($w) use ($term) {
                     $w->whereRaw('LOWER(account_no) LIKE ?', [$term])
                         ->orWhereRaw('LOWER(name) LIKE ?', [$term]);

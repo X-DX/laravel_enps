@@ -49,10 +49,7 @@ class AssignPran extends Component
     /** Pick an account from the search results → load its details + any existing PRAN. */
     public function selectAccount(string $accountNo): void
     {
-        $account = Subscriber::where('account_no', $accountNo)
-            ->where('save_flag', 'F')
-            ->where('isactive', true)
-            ->first();
+        $account = Subscriber::acrossOperators()->openFinalized()->where('account_no', $accountNo)->first();
 
         if ($account === null) {
             $this->dispatch('notify', type: 'error', message: 'Only a finalized, active account can get a PRAN.');
@@ -104,8 +101,7 @@ class AssignPran extends Component
     {
         $this->authorize(self::ABILITY);
 
-        $account = Subscriber::where('account_no', $this->selectedAccountNo)
-            ->where('save_flag', 'F')->where('isactive', true)->first();
+        $account = Subscriber::acrossOperators()->openFinalized()->where('account_no', $this->selectedAccountNo)->first();
 
         if ($account === null) {
             $this->dispatch('notify', type: 'error', message: 'Select a finalized account first.');
@@ -226,8 +222,11 @@ class AssignPran extends Component
         $treasuryName = '';
 
         if ($this->selectedAccountNo !== '') {
-            $account = Subscriber::with(['designationMaster', 'ddo'])
-                ->where('account_no', $this->selectedAccountNo)->first();
+            $account = Subscriber::acrossOperators()->openFinalized()
+                ->with(['designationMaster', 'ddo'])
+                ->where('account_no', $this->selectedAccountNo)
+                ->first();
+
             $mode = PranNo::where('account_no', $this->selectedAccountNo)->exists() ? 'update' : 'add';
 
             if ($account?->ddo?->treasury_code) {
@@ -235,8 +234,7 @@ class AssignPran extends Component
             }
         } elseif (trim($this->search) !== '') {
             $term = '%' . strtolower($this->search) . '%';
-            $results = Subscriber::query()
-                ->where('save_flag', 'F')->where('isactive', true)
+            $results = Subscriber::acrossOperators()->openFinalized()
                 ->where(function ($w) use ($term) {
                     $w->whereRaw('LOWER(account_no) LIKE ?', [$term])
                         ->orWhereRaw('LOWER(name) LIKE ?', [$term]);

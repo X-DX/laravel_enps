@@ -16,14 +16,18 @@ class FirstEntriesExport implements FromQuery, WithHeadings, WithMapping
     public function __construct(
         private readonly string $search = '',
         private readonly string $status = '',
+        private readonly ?Builder $query = null,
     ) {
     }
 
     public function query(): Builder
     {
-        return FirstReceipt::query()
+        // A caller may hand us a ready-built query (e.g. the Entry CR screen, which filters
+        // by Receipt No only); otherwise fall back to the standard search + status filter.
+        $base = $this->query ?? FirstReceipt::query()->filter($this->search, $this->status);
+
+        return $base
             ->with(['ddo.treasury', 'ddo.location', 'bank', 'purposeCode'])
-            ->filter($this->search, $this->status)
             ->orderByDesc('sl_no');
     }
 

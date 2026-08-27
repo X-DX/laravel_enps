@@ -26,6 +26,7 @@ use App\Livewire\Accounts\MigrateToUps; // Entry Section: Migration to UPS (menu
 use App\Livewire\FirstRegister\FirstEntries; // Entry Section: First Register lists (menu 172-174)
 use App\Livewire\FirstRegister\FirstEntry; // Entry Section: Entry First Register (menu 171)
 use App\Livewire\FirstRegister\ShowFirstEntry; // Entry Section: first-entry detail page
+use App\Livewire\CentralRegister\EntryCr; // Entry Section: Entry CR / CR generation (menu 201)
 use App\Livewire\Dashboard; // Analytics dashboard
 
 
@@ -184,5 +185,10 @@ Route::middleware('auth')->group(function () {
             ->whereNumber('firstReceipt')
             ->middleware('can:entrysection.view_all_first_entries')
             ->name('first-entries.show');
+
+        // Central Register — Entry CR (menu 201). Stage 2: generate CR receipt numbers.
+        Route::get('/central-register/entry', EntryCr::class)
+            ->middleware('can:entrysection.entry_cr')
+            ->name('central-register.entry');
     });
 });

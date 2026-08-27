@@ -152,8 +152,13 @@ class SubscriberTest extends TestCase
 
     public function test_an_account_number_lookup_is_scoped_for_non_admins(): void
     {
-        // This is exactly what CloseAccount / AssignPran / MigrateToUps do: find by account_no.
-        // A non-owner must NOT be able to reach another user's account by typing its number.
+        // Guards the BROWSE/EDIT screens — the Account Register list, the detail page, Edit,
+        // the command palette and the Excel export all use a plain Subscriber:: query.
+        // A non-owner must NOT reach another user's account by typing its number.
+        //
+        // The three per-account ACTION screens (Assign PRAN, Close Account, Migrate to UPS) are
+        // deliberate exceptions: they opt out with Subscriber::acrossOperators(). See
+        // docs/build-log/row-level-ownership.md.
         DB::table('allotment_accnt_no')->insert([
             'id' => 20, 'name' => 'OP2 FINAL', 'account_no' => 'AP/NPS/09/9999', 'save_flag' => 'F',
             'nameofdept' => '01', 'ddocode' => 589, 'designation' => 1, 'user_id' => 'op2',

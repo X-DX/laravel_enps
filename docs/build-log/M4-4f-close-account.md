@@ -115,3 +115,21 @@ and the register lists closures. Full suite at this slice: **146 passing**.
 
 A dedicated closure register, a guarded one-transaction close, and a searchable/exportable
 history. **Next: 4g — Edit an account.**
+
+---
+
+## Update (2026-08-25) — Close Account is cross-operator
+
+Row-level ownership (`OwnedByUser` on `Subscriber`) was silently narrowing every query on this
+screen to the logged-in operator's own accounts. For a non-admin the account dropdown came back empty, the closed register's Name column showed `—` (in the
+table, Excel and PDF), name-search via `whereHas('subscriber')` matched nothing, and — worst —
+`close()`'s guarded mass UPDATE flipped 0 rows and reported *"Account is already closed"* while
+nothing had happened.
+
+Roughly 17,400 migrated accounts carry no `user_id` at all, so they were invisible to every
+non-admin regardless. The legacy never filtered this screen by user.
+
+**Fix:** every `Subscriber::` query here now goes through `Subscriber::acrossOperators()`
+(plus `openFinalized()` where the finalized-and-open rule applies). Admins are unaffected.
+Full reasoning, and the rule it taught us, in
+[row-level-ownership.md](row-level-ownership.md).
