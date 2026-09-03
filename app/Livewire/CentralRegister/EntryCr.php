@@ -10,6 +10,8 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\DB;
+
 
 /**
  * Entry CR — "CR Generation" (legacy menu 201).
@@ -33,6 +35,10 @@ class EntryCr extends Component
 
     /** first_receipt sl_no's ticked for the batch (used by generate() in the next step). */
     public array $selected = [];
+
+    public string $attachReceiptNo = '';   // optional: file this batch under an existing receipt no
+    public ?string $attachInfo = null;      // the hint shown under the filed
+    public bool $attachValid = false;        // whether the above receipt number is valid (exists in central_reg) or is the typed number a real receipt of ours?
 
     public function mount(): void
     {
@@ -58,7 +64,7 @@ class EntryCr extends Component
     {
         return FirstReceipt::query()
             ->where('flag', 'CR')
-            ->when($this->search !== '', fn (Builder $q) => $q->whereRaw('CAST(sl_no AS TEXT) LIKE ?', ['%' . $this->search . '%']));
+            ->when($this->search !== '', fn(Builder $q) => $q->whereRaw('CAST(sl_no AS TEXT) LIKE ?', ['%' . $this->search . '%']));
     }
 
     /** Tick / untick every row on the current page. */
@@ -67,7 +73,7 @@ class EntryCr extends Component
         $pageKeys = $this->baseQuery()
             ->orderByDesc('sl_no')
             ->paginate($this->perPage)
-            ->pluck('sl_no')->map(fn ($id) => (string) $id)->all();
+            ->pluck('sl_no')->map(fn($id) => (string) $id)->all();
 
         $allSelected = count($pageKeys) > 0 && count(array_diff($pageKeys, $this->selected)) === 0;
 
@@ -101,10 +107,134 @@ class EntryCr extends Component
             'generatedAt' => now(),
         ])->setPaper('a4', 'landscape');
 
-        return response()->streamDownload(fn () => print($pdf->output()), 'cr-pending-' . now()->format('Y-m-d') . '.pdf', [
+        return response()->streamDownload(fn() => print($pdf->output()), 'cr-pending-' . now()->format('Y-m-d') . '.pdf', [
             'Content-Type' => 'application/pdf',
         ]);
     }
+
+    // Livewire magic hook — it runs automatically whenever the attachReceiptNo property changes
+    public function updatedAttachReceiptNo(): void
+    {
+        $value = trim($this->attachReceiptNo);
+
+        if ($value === '') {
+            $this->attachInfo = null;
+            $this->attachValid = false;
+            return;
+        }
+
+        // count how many central register rows already carry this receipt no - and are ours.
+        $count = DB::table('central_reg')
+            ->where('receipt_no', $value)
+            ->where('user_id', auth()->id())
+            ->count();
+
+        $this->attachValid = $count > 0;
+        $this->attachInfo = $this->attachValid
+            ? "{$count} existing record(s) found against Receipt No {$value}."
+            : "Receipt No {$value} not found for you.";
+    }
+
+    public function generate(): void
+    {
+        $this->authorize(self::ABILITY);
+
+        if (empty($this->selected)) {
+            $this->dispatch('notify', type: 'error', message: 'Select at least one receipt.');
+            return;
+        }
+
+        $attach = trim($this->attachReceiptNo);
+        $count = 0;
+        $receiptNo = DB::transaction(function () use ($attach, &$count) {
+            // Only our own receipts still waiting at 'CR' (guards against stale ticks).
+            $receipts = FirstReceipt::whereIn('sl_no', $this->selected)->where('flag', 'CR')->get();
+
+            if ($receipts->isEmpty()) {
+                return null;
+            }
+            $count = $receipts->count();
+
+            // Lock the counter so two operators can't grab the same number at once.
+            $counter = DB::table('counter_centralreg')->where('cunterid', 1)->lockForUpdate()->first();
+            $crSlNo  = (int) $counter->centregno;
+
+            if ($attach !== '') {
+                // Reuse an existing receipt number that belongs to us.
+                $isOurs = DB::table('central_reg')
+                    ->where('receipt_no', $attach)
+                    ->where('user_id', auth()->id())
+                    ->exists();
+
+                if (! $isOurs) {
+                    return false;   // invalid attach → abort (nothing written yet)
+                }
+
+                $receiptNo = (int) $attach;
+            } else {
+                $receiptNo = (int) $counter->recept_no;   // auto: next new number
+            }
+
+            foreach ($receipts as $fr) {
+                DB::table('central_reg')->insert([
+                    'sl_no'               => $crSlNo,
+                    'receipt_no'          => $receiptNo,
+                    'first_receipt_sl_no' => $fr->sl_no,
+                    'user_id'             => auth()->id(),
+                    'flag_p'              => 'P',
+                    'order_no'            => $fr->order_no,
+                    'draft_no'            => $fr->draft_no,
+                    'amount'              => $fr->amount,
+                    'order_date'          => $fr->order_date?->format('Y-m-d'),
+                    'draft_date'          => $fr->draft_date?->format('Y-m-d'),
+                    'bank_name'           => $fr->bank ? trim($fr->bank->bank_name) . ', ' . trim($fr->bank->branch_name) : null,
+                    'purpose'             => $fr->purpose,
+                ]);
+
+                DB::table('central_reg_entry_date')->insert([
+                    'receipt_no'     => $receiptNo,
+                    'draft_no'       => $fr->draft_no,
+                    'cen_entry_date' => now()->toDateString(),
+                    'cr_sl_no'       => $crSlNo,
+                    'amount'         => $fr->amount,
+                ]);
+
+                $crSlNo++;
+            }
+
+            // Serial ALWAYS advances (one per receipt); the receipt number is consumed ONLY when auto.
+            DB::table('counter_centralreg')->where('cunterid', 1)->update([
+                'centregno' => $crSlNo,
+                'recept_no' => $attach !== '' ? (int) $counter->recept_no : $receiptNo + 1,
+            ]);
+
+            FirstReceipt::whereIn('sl_no', $receipts->pluck('sl_no'))->where('flag', 'CR')->update(['flag' => 'FZ']);
+
+            return $receiptNo;
+        });
+
+        if ($receiptNo === false) {
+            $this->dispatch('notify', type: 'error', message: 'That Existing Receipt No is not valid / not yours.');
+            return;
+        }
+
+        if ($receiptNo === null) {
+            $this->dispatch('notify', type: 'error', message: 'Nothing to generate — those receipts are no longer pending.');
+            return;
+        }
+
+        // $this->reset('selected', 'attachReceiptNo', 'attachInfo', 'attachValid');
+        // $this->dispatch('notify', type: 'success', message: "CR generated. Receipt No: {$receiptNo}");
+
+        $message = $attach !== ''
+            ? "Filed {$count} receipt(s) under existing Receipt No {$receiptNo}."
+            : "Generated Receipt No {$receiptNo} for {$count} receipt(s).";
+
+        $this->reset('selected', 'attachReceiptNo', 'attachInfo', 'attachValid');
+        $this->dispatch('notify', type: 'success', message: $message);
+    }
+
+
 
     public function render()
     {
@@ -115,7 +245,7 @@ class EntryCr extends Component
 
         return view('livewire.central-register.entry-cr', [
             'entries' => $entries,
-            'pageKeys' => $entries->pluck('sl_no')->map(fn ($id) => (string) $id)->all(),
+            'pageKeys' => $entries->pluck('sl_no')->map(fn($id) => (string) $id)->all(),
         ]);
     }
 }

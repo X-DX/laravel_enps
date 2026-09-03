@@ -27,18 +27,55 @@
         <button wire:click="export" type="button"
             class="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
             </svg>
             Excel
         </button>
         <button wire:click="pdf" type="button"
             class="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20">
             <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
             </svg>
             PDF
         </button>
     </div>
+
+    {{-- Optional: file the next Generate CR under an existing receipt number --}}
+    <div class="mb-4 flex flex-wrap items-center gap-2">
+        <label for="attach" class="text-sm text-slate-600 dark:text-slate-300">
+            Existing Receipt No <span class="text-slate-400">(optional — blank = new number)</span>
+        </label>
+        <input wire:model.live.debounce.400ms="attachReceiptNo" id="attach" type="number" placeholder="e.g. 39028"
+            class="w-44 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
+        @if ($attachInfo)
+            <span
+                class="text-xs font-medium {{ $attachValid ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400' }}">
+                {{ $attachInfo }}
+            </span>
+        @endif
+    </div>
+
+    {{-- Action bar: appears once you tick at least one row --}}
+    @if (count($selected) > 0)
+        <div
+            class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 dark:border-indigo-500/30 dark:bg-indigo-500/10">
+            <p class="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                {{ count($selected) }} receipt(s) selected @if (trim($attachReceiptNo) !== '')
+                    · will use Receipt No {{ $attachReceiptNo }}
+                @endif.
+            </p>
+            <button wire:click="generate" type="button"
+                wire:confirm="Generate CR numbers for {{ count($selected) }} selected receipt(s)? This can’t be undone."
+                class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-sky-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-400 hover:to-sky-400">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                </svg>
+                Generate CR
+            </button>
+        </div>
+    @endif
 
     {{-- Pending-CR table --}}
     <div wire:loading.class.delay="opacity-50" wire:target="search,perPage"
@@ -48,8 +85,7 @@
                 <tr
                     class="whitespace-nowrap text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     <th class="px-2 py-2">
-                        <input type="checkbox" wire:click="toggleSelectAll"
-                            @checked(count($pageKeys) > 0 && count(array_diff($pageKeys, $selected)) === 0)
+                        <input type="checkbox" wire:click="toggleSelectAll" @checked(count($pageKeys) > 0 && count(array_diff($pageKeys, $selected)) === 0)
                             @disabled(count($pageKeys) === 0)
                             class="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500/30">
                     </th>
