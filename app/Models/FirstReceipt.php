@@ -6,6 +6,7 @@ use App\Models\Concerns\OwnedByUser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
  * A first-register receipt/draft = one incoming money deposit from a DDO (pooled contributions),
@@ -58,6 +59,12 @@ class FirstReceipt extends Model
     public function bank(): BelongsTo
     {
         return $this->belongsTo(Bank::class, 'draw_bank_code', 'bank_code');
+    }
+
+    /** The Central Register row generated for this receipt (holds the CR receipt number). */
+    public function centralReg(): HasOne
+    {
+        return $this->hasOne(CentralReg::class, 'first_receipt_sl_no', 'sl_no');
     }
 
     /** The purpose code (purpose → purpose_master_codes.pid). Named to avoid the `purpose` column. */

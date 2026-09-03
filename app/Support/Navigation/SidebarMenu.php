@@ -89,6 +89,9 @@ class SidebarMenu
         'entrysection.finalized_first_entry' => 'first-entries.finalized',
 
         'entrysection.entry_cr' => 'central-register.entry',
+        'entrysection.view_all_cr_entries' => 'cr-entries.index',
+        'entrysection.pending_cr_entries' => 'cr-entries.pending',
+        'entrysection.finalized_cr_entries' => 'cr-entries.finalized',
 
 
     ];
@@ -234,6 +237,7 @@ class SidebarMenu
             'entrysection.pending_issue_accounts' => $this->pendingCount('allotment_accnt_no', 'save_flag', 'T'),
             'entrysection.assign_pran_against_accounts' => $this->pendingCount('pran_no', 'save_flag', 'T'),
             'entrysection.pending_first_entry' => $this->pendingCount('first_receipt', 'flag', 'T'),
+            'entrysection.pending_cr_entries' => $this->pendingCount('first_receipt', 'flag', 'CR'),
             default => 0,
         };
 

@@ -27,6 +27,7 @@ use App\Livewire\FirstRegister\FirstEntries; // Entry Section: First Register li
 use App\Livewire\FirstRegister\FirstEntry; // Entry Section: Entry First Register (menu 171)
 use App\Livewire\FirstRegister\ShowFirstEntry; // Entry Section: first-entry detail page
 use App\Livewire\CentralRegister\EntryCr; // Entry Section: Entry CR / CR generation (menu 201)
+use App\Livewire\CentralRegister\CrEntries; // Entry Section: Central Register lists (menu 202-204)
 use App\Livewire\Dashboard; // Analytics dashboard
 
 
@@ -190,5 +191,20 @@ Route::middleware('auth')->group(function () {
         Route::get('/central-register/entry', EntryCr::class)
             ->middleware('can:entrysection.entry_cr')
             ->name('central-register.entry');
+
+        // Central Register browse lists (menu 202–204). One component, three screens.
+        Route::get('/central-register', CrEntries::class)
+            ->middleware('can:entrysection.view_all_cr_entries')
+            ->name('cr-entries.index');
+
+        Route::get('/central-register/pending', CrEntries::class)
+            ->middleware('can:entrysection.pending_cr_entries')
+            ->defaults('mode', 'pending')
+            ->name('cr-entries.pending');
+
+        Route::get('/central-register/finalized', CrEntries::class)
+            ->middleware('can:entrysection.finalized_cr_entries')
+            ->defaults('mode', 'finalized')
+            ->name('cr-entries.finalized');
     });
 });
