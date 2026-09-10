@@ -6,6 +6,7 @@ use App\Models\Concerns\OwnedByUser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
@@ -13,7 +14,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * before it's split into individual contributions later. Maps onto the legacy `first_receipt`
  * table; `sl_no` is the auto-increment PK.
  *
- * The `flag` is the lifecycle: 'T' = pending, 'CR' (or legacy 'FZ') = finalized, 'E' = exported.
+ * The `flag` is the lifecycle: 'T' = entered, 'CR' = finalized at First Register and waiting for
+ * CR generation, 'FZ' = CR generated, 'E' = exported onward. (statusLabel() is the single source
+ * of truth for the wording; the data agrees — 239,964 FZ against 1,663 CR.)
  */
 class FirstReceipt extends Model
 {
@@ -61,10 +64,49 @@ class FirstReceipt extends Model
         return $this->belongsTo(Bank::class, 'draw_bank_code', 'bank_code');
     }
 
-    /** The Central Register row generated for this receipt (holds the CR receipt number). */
+    /**
+     * The Central Register row generated for this receipt (holds the CR No and Receipt No).
+     *
+     * The explicit orderBy is not cosmetic. 249 legacy drafts were booked into the register
+     * TWICE — different CR Nos, different Receipt Nos, sometimes different operators — so this
+     * "hasOne" can genuinely match several rows. Without an order the database is free to return
+     * either, and the CR No on screen could change between two refreshes of the same page.
+     * Ordering by sl_no pins it to the earliest (original) booking, for the list, the detail
+     * page, Excel and PDF alike. Use centralRegs() when you need to see all of them.
+     */
     public function centralReg(): HasOne
     {
-        return $this->hasOne(CentralReg::class, 'first_receipt_sl_no', 'sl_no');
+        return $this->hasOne(CentralReg::class, 'first_receipt_sl_no', 'sl_no')->orderBy('sl_no');
+    }
+
+    /**
+     * Every Central Register row for this receipt. Normally exactly one; more than one means the
+     * draft was double-booked in the legacy system, which the lists flag rather than hide.
+     */
+    public function centralRegs(): HasMany
+    {
+        return $this->hasMany(CentralReg::class, 'first_receipt_sl_no', 'sl_no')->orderBy('sl_no');
+    }
+
+    /**
+     * The Central Register booking to show for this receipt — the earliest one.
+     *
+     * Prefers the already-eager-loaded centralRegs collection so the lists never fire a second
+     * query per row just to display the CR No.
+     */
+    public function primaryCentralReg(): ?CentralReg
+    {
+        return $this->relationLoaded('centralRegs')
+            ? $this->centralRegs->first()
+            : $this->centralReg;
+    }
+
+    /** True when this draft was booked into the Central Register more than once (legacy defect). */
+    public function isDoubleBooked(): bool
+    {
+        return $this->relationLoaded('centralRegs')
+            ? $this->centralRegs->count() > 1
+            : $this->centralRegs()->count() > 1;
     }
 
     /** The purpose code (purpose → purpose_master_codes.pid). Named to avoid the `purpose` column. */

@@ -3,52 +3,86 @@
 
     <div class="mb-6">
         <h1 class="font-display text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{{ $title }}</h1>
-        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">Central Register entries and their CR receipt numbers.</p>
+        <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Each row shows its <span class="font-medium text-slate-600 dark:text-slate-300">First Receipt No</span> (the draft as it arrived),
+            its <span class="font-medium text-slate-600 dark:text-slate-300">CR No</span> (serial in the Central Register)
+            and the <span class="font-medium text-slate-600 dark:text-slate-300">Receipt No</span> printed on the DDO's acknowledgement —
+            one Receipt No covers every draft finalized in the same batch.
+        </p>
     </div>
 
     {{-- Toolbar --}}
-    <div class="mb-4 flex flex-wrap items-center gap-3">
-        <div class="relative min-w-56 flex-1">
-            <input wire:model.live.debounce.300ms="search" type="search" placeholder="Search Receipt No or CR Receipt No…"
-                class="block w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
-        </div>
+    <div class="mb-4 space-y-3">
+        <div class="flex flex-wrap items-center gap-3">
+            <div class="relative min-w-64 flex-1">
+                <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+                </svg>
+                <input wire:model.live.debounce.300ms="search" type="search"
+                    placeholder="Search First Receipt No, CR No, Receipt No, or draft/order no…"
+                    class="block w-full rounded-xl border border-slate-300 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
+            </div>
 
-        @if ($mode === 'all')
+            @if ($mode === 'all')
+                <div class="flex items-center gap-2">
+                    <label for="status" class="text-sm text-slate-500 dark:text-slate-400">Status</label>
+                    <select wire:model.live="status" id="status"
+                        class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
+                        <option value="">All</option>
+                        <option value="CR">Pending at CR Generation</option>
+                        <option value="FZ">Finalized (CR Generated)</option>
+                    </select>
+                </div>
+            @endif
+
             <div class="flex items-center gap-2">
-                <label for="status" class="text-sm text-slate-500 dark:text-slate-400">Status</label>
-                <select wire:model.live="status" id="status"
+                <label for="perPage" class="text-sm text-slate-500 dark:text-slate-400">Show</label>
+                <select wire:model.live="perPage" id="perPage"
                     class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
-                    <option value="">All</option>
-                    <option value="CR">Pending at CR Generation</option>
-                    <option value="FZ">Finalized (CR Generated)</option>
+                    @foreach ([25, 50, 100] as $size)
+                        <option value="{{ $size }}">{{ $size }}</option>
+                    @endforeach
                 </select>
             </div>
-        @endif
 
-        <div class="flex items-center gap-2">
-            <label for="perPage" class="text-sm text-slate-500 dark:text-slate-400">Show</label>
-            <select wire:model.live="perPage" id="perPage"
-                class="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
-                @foreach ([25, 50, 100] as $size)
-                    <option value="{{ $size }}">{{ $size }}</option>
-                @endforeach
-            </select>
+            <button wire:click="export" type="button"
+                class="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Excel
+            </button>
+            <button wire:click="pdf" type="button"
+                class="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                </svg>
+                PDF
+            </button>
         </div>
 
-        <button wire:click="export" type="button"
-            class="inline-flex items-center gap-2 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:hover:bg-emerald-500/20">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-            </svg>
-            Excel
-        </button>
-        <button wire:click="pdf" type="button"
-            class="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-            </svg>
-            PDF
-        </button>
+        {{-- Entry-date range. Blank by default: these screens browse the whole register, unlike the
+             legacy pages which silently defaulted to today and hid everything else. --}}
+        <div class="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 dark:border-white/10 dark:bg-white/[0.03]">
+            <span class="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Entry date</span>
+            <div class="flex items-center gap-2">
+                <label for="fromDate" class="text-sm text-slate-500 dark:text-slate-400">From</label>
+                <input wire:model.live="fromDate" id="fromDate" type="date"
+                    class="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
+            </div>
+            <div class="flex items-center gap-2">
+                <label for="toDate" class="text-sm text-slate-500 dark:text-slate-400">To</label>
+                <input wire:model.live="toDate" id="toDate" type="date"
+                    class="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 dark:border-white/10 dark:bg-white/5 dark:text-white">
+            </div>
+            @if ($hasFilters)
+                <button wire:click="resetFilters" type="button"
+                    class="ml-auto inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-white dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5">
+                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" /></svg>
+                    Clear filters
+                </button>
+            @endif
+        </div>
     </div>
 
     @php
@@ -60,17 +94,19 @@
         ];
         $canEdit = auth()->user()?->can('entrysection.entry_first_register');
         $showActions = in_array($mode, ['all', 'pending']) && $canEdit;
+        $colspan = $showActions ? 16 : 15;
     @endphp
 
     {{-- Table --}}
-    <div wire:loading.class.delay="opacity-50" wire:target="search,status,perPage"
+    <div wire:loading.class.delay="opacity-50" wire:target="search,status,perPage,fromDate,toDate"
         class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.03]">
         <table class="min-w-full divide-y divide-slate-200 text-xs dark:divide-white/10">
             <thead>
                 <tr class="whitespace-nowrap text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                     <th class="px-2 py-2">Sl no</th>
+                    <th class="px-2 py-2">First Receipt No</th>
+                    <th class="px-2 py-2">CR No</th>
                     <th class="px-2 py-2">Receipt No</th>
-                    <th class="px-2 py-2">CR Receipt No</th>
                     <th class="px-2 py-2">Treasury Location</th>
                     <th class="px-2 py-2">DDO</th>
                     <th class="px-2 py-2">Order/Letter No</th>
@@ -92,13 +128,26 @@
                     @php
                         $treasuryLocation = $entry->ddo?->treasury?->treasury_name ?? $entry->ddo?->location?->loc_name;
                         $bankName = $entry->bank ? trim($entry->bank->bank_name) . ', ' . trim($entry->bank->branch_name) : null;
+                        $cr = $entry->primaryCentralReg();
+                        $doubleBooked = $entry->isDoubleBooked();
                     @endphp
                     <tr wire:key="cr-{{ $entry->sl_no }}" class="whitespace-nowrap align-middle transition hover:bg-slate-50 dark:hover:bg-white/5">
                         <td class="px-2 py-1.5 text-slate-500 dark:text-slate-400">{{ $entries->firstItem() + $loop->index }}</td>
                         <td class="px-2 py-1.5 font-medium">
                             <a href="{{ route('first-entries.show', $entry->sl_no) }}" wire:navigate class="text-indigo-600 hover:underline dark:text-indigo-300">{{ $entry->sl_no }}</a>
                         </td>
-                        <td class="px-2 py-1.5 font-semibold text-slate-800 dark:text-slate-100">{{ $entry->centralReg?->receipt_no ?? '—' }}</td>
+                        <td class="px-2 py-1.5 font-semibold text-slate-800 dark:text-slate-100">
+                            {{ $cr?->sl_no ?? '—' }}
+                            @if ($doubleBooked)
+                                {{-- Legacy defect: this draft was booked into the register more than
+                                     once. We show the earliest and flag it rather than hide it. --}}
+                                <span title="This draft has {{ $entry->centralRegs->count() }} Central Register entries: CR {{ $entry->centralRegs->pluck('sl_no')->join(', ') }}. Showing the earliest."
+                                    class="ml-1 inline-block cursor-help rounded px-1.5 py-0.5 text-[10px] font-bold {{ $tones['amber'] }}">
+                                    ×{{ $entry->centralRegs->count() }}
+                                </span>
+                            @endif
+                        </td>
+                        <td class="px-2 py-1.5 font-semibold text-slate-800 dark:text-slate-100">{{ $cr?->receipt_no ?? '—' }}</td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $treasuryLocation ?? '—' }}</td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->ddo?->ddo_name ?? '—' }}</td>
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->order_no ?: '—' }}</td>
@@ -111,6 +160,15 @@
                         <td class="px-2 py-1.5 text-slate-600 dark:text-slate-300">{{ $entry->purposeLabel() }}</td>
                         <td class="px-2 py-1.5">
                             <span class="inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold {{ $tones[$entry->statusTone()] }}">{{ $entry->statusLabel() }}</span>
+                            @if ($cr?->isBlocked())
+                                {{-- A blocked CR is under objection. An operator must never read this
+                                     screen and assume the booking is clear. --}}
+                                <span title="Blocked{{ $cr->blocked_date ? ' on ' . $cr->blocked_date->format('d-m-Y') : '' }}{{ $cr->blocked_by_user ? ' by ' . $cr->blocked_by_user : '' }}{{ $cr->blocked_reason ? ' — ' . $cr->blocked_reason : '' }}"
+                                    class="ml-1 inline-flex cursor-help items-center gap-1 rounded-md bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                    BLOCKED
+                                </span>
+                            @endif
                         </td>
                         @if ($showActions)
                             <td class="px-2 py-1.5 text-right">
@@ -129,7 +187,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="15"><x-empty-state icon="banknotes" title="No Central Register entries found" message="Try a different search or status filter." /></td>
+                        <td colspan="{{ $colspan }}"><x-empty-state icon="banknotes" title="No Central Register entries found" message="Try a different search, status or date range." /></td>
                     </tr>
                 @endforelse
             </tbody>

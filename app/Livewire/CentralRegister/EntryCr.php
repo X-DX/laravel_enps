@@ -135,6 +135,21 @@ class EntryCr extends Component
             : "Receipt No {$value} not found for you.";
     }
 
+    /**
+     * Book the ticked drafts into the Central Register.
+     *
+     * THE CONCURRENCY RULE, and why the lock is not optional:
+     * the legacy code read counter_centralreg, inserted, then wrote the counter back — three
+     * statements with no lock. Two operators pressing this button in the same moment both read
+     * the same value and both booked the same CR No; 146 such duplicates are in the legacy data.
+     * A transaction alone does NOT prevent it, because a plain SELECT is a non-locking snapshot
+     * read. lockForUpdate() makes the second operator WAIT and then re-read the fresh number.
+     * A PRIMARY KEY on central_reg.sl_no now backs this up at the database level.
+     *
+     * The lock is held until commit, so everything that does not need it is done first (validating
+     * the attach number, loading the drafts with their banks) and the writes inside are batched.
+     * Every extra query in here freezes every other operator in the office.
+     */
     public function generate(): void
     {
         $this->authorize(self::ABILITY);
@@ -145,64 +160,82 @@ class EntryCr extends Component
         }
 
         $attach = trim($this->attachReceiptNo);
-        $count = 0;
-        $receiptNo = DB::transaction(function () use ($attach, &$count) {
-            // Only our own receipts still waiting at 'CR' (guards against stale ticks).
-            $receipts = FirstReceipt::whereIn('sl_no', $this->selected)->where('flag', 'CR')->get();
 
-            if ($receipts->isEmpty()) {
-                return null;
+        // Validated BEFORE the transaction: it is a read-only check and must not hold the counter.
+        if ($attach !== '') {
+            $isOurs = DB::table('central_reg')
+                ->where('receipt_no', $attach)
+                ->where('user_id', auth()->id())
+                ->exists();
+
+            if (! $isOurs) {
+                $this->dispatch('notify', type: 'error', message: 'That Existing Receipt No is not valid / not yours.');
+                return;
             }
-            $count = $receipts->count();
+        }
 
-            // Lock the counter so two operators can't grab the same number at once.
+        // Eager-load the bank here, outside the lock. Resolving $fr->bank inside the loop used to
+        // fire one query per draft — 471 round trips on a big batch, all while blocking everyone.
+        $receipts = FirstReceipt::with('bank')
+            ->whereIn('sl_no', $this->selected)
+            ->where('flag', 'CR')
+            ->get();
+
+        if ($receipts->isEmpty()) {
+            $this->dispatch('notify', type: 'error', message: 'Nothing to generate — those receipts are no longer pending.');
+            return;
+        }
+
+        $count = $receipts->count();
+
+        $receiptNo = DB::transaction(function () use ($attach, $receipts) {
+            // Serialise every operator here. B blocks until A commits, then re-reads the new value.
             $counter = DB::table('counter_centralreg')->where('cunterid', 1)->lockForUpdate()->first();
-            $crSlNo  = (int) $counter->centregno;
 
-            if ($attach !== '') {
-                // Reuse an existing receipt number that belongs to us.
-                $isOurs = DB::table('central_reg')
-                    ->where('receipt_no', $attach)
-                    ->where('user_id', auth()->id())
-                    ->exists();
+            $crSlNo = (int) $counter->centregno;
+            $receiptNo = $attach !== '' ? (int) $attach : (int) $counter->recept_no;
+            $today = now()->toDateString();
 
-                if (! $isOurs) {
-                    return false;   // invalid attach → abort (nothing written yet)
-                }
-
-                $receiptNo = (int) $attach;
-            } else {
-                $receiptNo = (int) $counter->recept_no;   // auto: next new number
-            }
+            $crRows = [];
+            $dateRows = [];
 
             foreach ($receipts as $fr) {
-                DB::table('central_reg')->insert([
-                    'sl_no'               => $crSlNo,
-                    'receipt_no'          => $receiptNo,
+                $crRows[] = [
+                    'sl_no' => $crSlNo,
+                    'receipt_no' => $receiptNo,
                     'first_receipt_sl_no' => $fr->sl_no,
-                    'user_id'             => auth()->id(),
-                    'flag_p'              => 'P',
-                    'order_no'            => $fr->order_no,
-                    'draft_no'            => $fr->draft_no,
-                    'amount'              => $fr->amount,
-                    'order_date'          => $fr->order_date?->format('Y-m-d'),
-                    'draft_date'          => $fr->draft_date?->format('Y-m-d'),
-                    'bank_name'           => $fr->bank ? trim($fr->bank->bank_name) . ', ' . trim($fr->bank->branch_name) : null,
-                    'purpose'             => $fr->purpose,
-                ]);
+                    'user_id' => auth()->id(),
+                    'flag_p' => 'P',
+                    'order_no' => $fr->order_no,
+                    'draft_no' => $fr->draft_no,
+                    'amount' => $fr->amount,
+                    'order_date' => $fr->order_date?->format('Y-m-d'),
+                    'draft_date' => $fr->draft_date?->format('Y-m-d'),
+                    'bank_name' => $fr->bank ? trim($fr->bank->bank_name) . ', ' . trim($fr->bank->branch_name) : null,
+                    'purpose' => $fr->purpose,
+                ];
 
-                DB::table('central_reg_entry_date')->insert([
-                    'receipt_no'     => $receiptNo,
-                    'draft_no'       => $fr->draft_no,
-                    'cen_entry_date' => now()->toDateString(),
-                    'cr_sl_no'       => $crSlNo,
-                    'amount'         => $fr->amount,
-                ]);
+                $dateRows[] = [
+                    'receipt_no' => $receiptNo,
+                    'draft_no' => $fr->draft_no,
+                    'cen_entry_date' => $today,
+                    'cr_sl_no' => $crSlNo,
+                    'amount' => $fr->amount,
+                ];
 
                 $crSlNo++;
             }
 
-            // Serial ALWAYS advances (one per receipt); the receipt number is consumed ONLY when auto.
+            // Chunked so a large batch stays within the driver's placeholder limit.
+            foreach (array_chunk($crRows, 500) as $chunk) {
+                DB::table('central_reg')->insert($chunk);
+            }
+            foreach (array_chunk($dateRows, 500) as $chunk) {
+                DB::table('central_reg_entry_date')->insert($chunk);
+            }
+
+            // The CR serial ALWAYS advances, one per draft. The receipt number is consumed only
+            // when a new one was issued — attaching to an existing receipt must not burn a number.
             DB::table('counter_centralreg')->where('cunterid', 1)->update([
                 'centregno' => $crSlNo,
                 'recept_no' => $attach !== '' ? (int) $counter->recept_no : $receiptNo + 1,
@@ -213,19 +246,6 @@ class EntryCr extends Component
             return $receiptNo;
         });
 
-        if ($receiptNo === false) {
-            $this->dispatch('notify', type: 'error', message: 'That Existing Receipt No is not valid / not yours.');
-            return;
-        }
-
-        if ($receiptNo === null) {
-            $this->dispatch('notify', type: 'error', message: 'Nothing to generate — those receipts are no longer pending.');
-            return;
-        }
-
-        // $this->reset('selected', 'attachReceiptNo', 'attachInfo', 'attachValid');
-        // $this->dispatch('notify', type: 'success', message: "CR generated. Receipt No: {$receiptNo}");
-
         $message = $attach !== ''
             ? "Filed {$count} receipt(s) under existing Receipt No {$receiptNo}."
             : "Generated Receipt No {$receiptNo} for {$count} receipt(s).";
@@ -233,8 +253,6 @@ class EntryCr extends Component
         $this->reset('selected', 'attachReceiptNo', 'attachInfo', 'attachValid');
         $this->dispatch('notify', type: 'success', message: $message);
     }
-
-
 
     public function render()
     {

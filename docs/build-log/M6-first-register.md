@@ -14,11 +14,18 @@ Register: one entry form + three list screens (View All / Pending / Finalized).
 
 ```
 T  = pending        (a fresh entry)
-CR = finalized      (what our Finalize writes; legacy also has FZ)
+CR = finalized here, but still WAITING for a CR number (next stage)
+FZ = CR generated   (the Central Register booking exists)
 E  = exported       (later, beyond this module)
 ```
 
-So **Pending = flag `T`**, **Finalized = flag `FZ` or `CR`**.
+So **Pending = flag `T`**, **Finalized = flag `CR` or `FZ`**.
+
+> **Corrected 2026-09-10.** An earlier version of this note said *"CR = finalized, legacy also
+> has FZ"*, implying the two were interchangeable. They are not: `CR` is **still pending** at CR
+> Generation, `FZ` means the Central Register number has been issued. The data settles it —
+> 239,964 `FZ` against 1,663 `CR`. See
+> [M6-central-register-numbering.md](M6-central-register-numbering.md).
 
 ### The Entry form (menu 171)
 Fields and where each dropdown comes from:

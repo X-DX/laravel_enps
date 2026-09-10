@@ -17,8 +17,17 @@ use Maatwebsite\Excel\Facades\Excel;
  *   'pending'   → Pending CR Entries    (flag CR)
  *   'finalized' → Finalized CR Entries  (flag FZ)
  *
- * Read-only. Each finalized row shows its CR Receipt No (from central_reg). Editing a still-
- * pending row reuses the First Register edit form (same underlying first_receipt record).
+ * Read-only; the numbers are issued by EntryCr. Each finalized row carries THREE distinct
+ * identifiers that the legacy screens kept apart and which must not be conflated:
+ *
+ *   First Receipt No  first_receipt.sl_no          the row id of the draft as it arrived
+ *   CR No             central_reg.sl_no            its serial in the Central Register
+ *   Receipt No        central_reg.receipt_no       the number on the acknowledgement handed to
+ *                                                  the DDO — SHARED by every draft finalized in
+ *                                                  the same batch (38,122 receipts over 358,646
+ *                                                  register rows)
+ *
+ * Editing a still-pending row reuses the First Register edit form (same first_receipt record).
  */
 #[Layout('components.layouts.app')]
 class CrEntries extends Component
@@ -29,6 +38,10 @@ class CrEntries extends Component
     public int $perPage = 25;
     public string $search = '';
     public string $status = '';   // '' all · 'CR' pending · 'FZ' finalized (only on the 'all' screen)
+
+    /** Entry-date range, on first_receipt.date_of_entry. Both blank = browse everything. */
+    public string $fromDate = '';
+    public string $toDate = '';
 
     private const ABILITIES = [
         'all' => 'entrysection.view_all_cr_entries',
@@ -41,6 +54,9 @@ class CrEntries extends Component
         'pending' => 'Pending CR Entries',
         'finalized' => 'Finalized CR Entries',
     ];
+
+    /** Loaded on every read path so the list, Excel and PDF all agree and none of them N+1. */
+    private const EAGER = ['ddo.treasury', 'ddo.location', 'bank', 'purposeCode', 'centralRegs'];
 
     public function mount(string $mode = 'all'): void
     {
@@ -63,9 +79,30 @@ class CrEntries extends Component
         $this->resetPage();
     }
 
+    public function updatingFromDate(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatingToDate(): void
+    {
+        $this->resetPage();
+    }
+
+    /** Clear every filter back to the default "browse everything" view. */
+    public function resetFilters(): void
+    {
+        $this->reset('search', 'status', 'fromDate', 'toDate');
+        $this->resetPage();
+    }
+
     /**
      * The Central Register stage: first_receipts at flag CR (pending) and/or FZ (finalized).
-     * Search matches Receipt No (sl_no) or the CR Receipt No (central_reg.receipt_no).
+     *
+     * Search accepts any of the three identifiers above. A digits-only term is matched as a
+     * NUMBER against the integer columns, not as text: the old `CAST(sl_no AS TEXT) LIKE '%1%'`
+     * could never use an index and scanned all 274k rows on every keystroke. Anything else is
+     * treated as a draft or order number.
      */
     protected function baseQuery(): Builder
     {
@@ -77,11 +114,25 @@ class CrEntries extends Component
 
         return FirstReceipt::query()
             ->whereIn('flag', $flags)
-            ->when($this->search !== '', function (Builder $q) {
-                $term = '%' . strtolower($this->search) . '%';
+            ->when($this->fromDate !== '', fn (Builder $q) => $q->whereDate('date_of_entry', '>=', $this->fromDate))
+            ->when($this->toDate !== '', fn (Builder $q) => $q->whereDate('date_of_entry', '<=', $this->toDate))
+            ->when(trim($this->search) !== '', function (Builder $q) {
+                $term = trim($this->search);
+
                 $q->where(function (Builder $q) use ($term) {
-                    $q->whereRaw('CAST(sl_no AS TEXT) LIKE ?', [$term])
-                        ->orWhereHas('centralReg', fn (Builder $c) => $c->whereRaw('CAST(receipt_no AS TEXT) LIKE ?', [$term]));
+                    if (ctype_digit($term)) {
+                        $number = (int) $term;
+
+                        $q->where('sl_no', $number)                       // First Receipt No
+                            ->orWhereHas('centralRegs', fn (Builder $c) => $c
+                                ->where('sl_no', $number)                 // CR No
+                                ->orWhere('receipt_no', $number));        // Receipt No
+                    } else {
+                        $like = '%' . strtolower($term) . '%';
+
+                        $q->whereRaw('LOWER(draft_no) LIKE ?', [$like])
+                            ->orWhereRaw('LOWER(order_no) LIKE ?', [$like]);
+                    }
                 });
             });
     }
@@ -101,7 +152,7 @@ class CrEntries extends Component
         $this->authorize(self::ABILITIES[$this->mode]);
 
         $rows = $this->baseQuery()
-            ->with(['ddo.treasury', 'ddo.location', 'bank', 'purposeCode', 'centralReg'])
+            ->with(self::EAGER)
             ->orderByDesc('sl_no')
             ->get();
 
@@ -119,13 +170,14 @@ class CrEntries extends Component
     public function render()
     {
         $entries = $this->baseQuery()
-            ->with(['ddo.treasury', 'ddo.location', 'bank', 'purposeCode', 'centralReg'])
+            ->with(self::EAGER)
             ->orderByDesc('sl_no')
             ->paginate($this->perPage);
 
         return view('livewire.central-register.cr-entries', [
             'entries' => $entries,
             'title' => self::TITLES[$this->mode] ?? self::TITLES['all'],
+            'hasFilters' => $this->search !== '' || $this->status !== '' || $this->fromDate !== '' || $this->toDate !== '',
         ]);
     }
 }

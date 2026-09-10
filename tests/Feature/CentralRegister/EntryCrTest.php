@@ -252,4 +252,66 @@ class EntryCrTest extends TestCase
             ->set('attachReceiptNo', '999999')
             ->assertSet('attachValid', false);
     }
+
+    public function test_the_database_itself_rejects_a_duplicate_cr_number(): void
+    {
+        // The safety net behind lockForUpdate(). Legacy had no key here, which is how 146
+        // duplicate CR Numbers reached production. No code path can reintroduce one now.
+        DB::table('central_reg')->insert(['sl_no' => 100, 'receipt_no' => 500, 'user_id' => 'admin', 'order_no' => 'X', 'draft_no' => 'Y', 'amount' => 1]);
+
+        $this->expectException(\Illuminate\Database\QueryException::class);
+
+        DB::table('central_reg')->insert(['sl_no' => 100, 'receipt_no' => 501, 'user_id' => 'admin', 'order_no' => 'X', 'draft_no' => 'Y', 'amount' => 1]);
+    }
+
+    public function test_a_batch_gets_consecutive_cr_numbers_under_one_receipt_number(): void
+    {
+        // The core business rule: one acknowledgement slip covers the whole batch, but every
+        // draft still gets its own serial in the register.
+        $ids = collect(range(1, 12))->map(fn () => $this->seedReceipt())->all();
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(EntryCr::class)
+            ->set('selected', array_map('strval', $ids))
+            ->call('generate');
+
+        $rows = DB::table('central_reg')->orderBy('sl_no')->get();
+
+        $this->assertCount(12, $rows);
+        $this->assertSame(range(100, 111), $rows->pluck('sl_no')->map(fn ($n) => (int) $n)->all());
+        $this->assertSame([500], $rows->pluck('receipt_no')->map(fn ($n) => (int) $n)->unique()->values()->all());
+
+        $counter = DB::table('counter_centralreg')->where('cunterid', 1)->first();
+        $this->assertSame(112, (int) $counter->centregno);   // serial: +1 per draft
+        $this->assertSame(501, (int) $counter->recept_no);   // receipt: +1 per BATCH
+    }
+
+    public function test_generate_does_not_issue_a_query_per_draft_while_holding_the_lock(): void
+    {
+        // Query count must not scale with batch size. Every extra round trip inside the
+        // transaction is time the counter row stays locked and every other operator waits.
+        $small = collect(range(1, 3))->map(fn () => $this->seedReceipt())->all();
+        $admin = $this->makeUser('admin', 'A');
+
+        $count = 0;
+        DB::listen(function () use (&$count) {
+            $count++;
+        });
+
+        Livewire::actingAs($admin)->test(EntryCr::class)
+            ->set('selected', array_map('strval', $small))
+            ->call('generate');
+        $forThree = $count;
+
+        $large = collect(range(1, 30))->map(fn () => $this->seedReceipt())->all();
+        $count = 0;
+
+        Livewire::actingAs($admin)->test(EntryCr::class)
+            ->set('selected', array_map('strval', $large))
+            ->call('generate');
+        $forThirty = $count;
+
+        // Ten times the drafts must not mean ten times the queries.
+        $this->assertSame($forThree, $forThirty, "Query count scaled with batch size ({$forThree} → {$forThirty}); generate() is doing per-row work inside the lock.");
+    }
 }

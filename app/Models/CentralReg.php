@@ -23,6 +23,22 @@ class CentralReg extends Model
     public $timestamps = false;
     protected $guarded = [];
 
+    protected $casts = [
+        'blocked_cr' => 'boolean',
+        'blocked_date' => 'date',
+        'print_date' => 'date',
+    ];
+
+    /**
+     * A blocked CR entry: the office has frozen this booking (626 rows in the legacy data).
+     * The reason and who blocked it sit alongside, and the lists surface them — an operator
+     * reading a Central Register screen must be able to see that an entry is under objection.
+     */
+    public function isBlocked(): bool
+    {
+        return (bool) $this->blocked_cr;
+    }
+
     /** The first receipt this CR row was generated from. */
     public function firstReceipt(): BelongsTo
     {

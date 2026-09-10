@@ -12,8 +12,12 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * Central Register lists (menu 202–204): View All / Pending / Finalized, mode-driven, showing
- * each finalized row's CR Receipt No from central_reg.
+ * Central Register lists (menu 202–204): View All / Pending / Finalized, mode-driven.
+ *
+ * The point these tests defend is that the THREE identifiers stay apart and correctly labelled:
+ * First Receipt No (first_receipt.sl_no), CR No (central_reg.sl_no) and Receipt No
+ * (central_reg.receipt_no, shared across a whole finalized batch). Conflating them in a pension
+ * office means an acknowledgement slip pointing at the wrong money.
  */
 class CrEntriesTest extends TestCase
 {
@@ -109,6 +113,11 @@ class CrEntriesTest extends TestCase
             $t->bigInteger('receipt_no');
             $t->bigInteger('first_receipt_sl_no')->nullable();
             $t->string('user_id')->nullable();
+            $t->integer('blocked_cr')->default(0);
+            $t->text('blocked_reason')->nullable();
+            $t->date('blocked_date')->nullable();
+            $t->string('blocked_by_user', 15)->nullable();
+            $t->date('print_date')->nullable();
         });
 
         foreach ([
@@ -143,13 +152,21 @@ class CrEntriesTest extends TestCase
         DB::table('user_permission')->insert(['user_id' => $userId, 'permission_id' => $pid]);
     }
 
-    private function seedReceipt(string $flag, string $draftNo, string $userId = 'admin'): int
+    private function seedReceipt(string $flag, string $draftNo, string $userId = 'admin', string $entryDate = '2024-01-01'): int
     {
         return DB::table('first_receipt')->insertGetId([
             'draft_no' => $draftNo, 'draft_date' => '2024-01-05', 'order_no' => 'ORD/1', 'order_date' => '2024-01-01',
-            'amount' => 1000, 'date_of_entry' => '2024-01-01', 'flag' => $flag, 'ddocode' => 2, 'type' => 'R',
+            'amount' => 1000, 'date_of_entry' => $entryDate, 'flag' => $flag, 'ddocode' => 2, 'type' => 'R',
             'draw_bank_code' => 10, 'purpose' => 'D01', 'contribution_type' => 'SC', 'pension_type' => 'N', 'user_id' => $userId,
         ]);
+    }
+
+    /** Book a draft into the Central Register: CR No and Receipt No are deliberately different. */
+    private function seedCr(int $crNo, int $receiptNo, int $firstReceiptSlNo, array $extra = []): void
+    {
+        DB::table('central_reg')->insert(array_merge([
+            'sl_no' => $crNo, 'receipt_no' => $receiptNo, 'first_receipt_sl_no' => $firstReceiptSlNo, 'user_id' => 'admin',
+        ], $extra));
     }
 
     public function test_the_route_is_forbidden_without_the_permission(): void
@@ -161,7 +178,7 @@ class CrEntriesTest extends TestCase
     {
         $this->seedReceipt('CR', 'PENDING1');
         $fz = $this->seedReceipt('FZ', 'DONE1');
-        DB::table('central_reg')->insert(['sl_no' => 100, 'receipt_no' => 39028, 'first_receipt_sl_no' => $fz, 'user_id' => 'admin']);
+        $this->seedCr(crNo: 100, receiptNo: 39028, firstReceiptSlNo: $fz);
 
         Livewire::actingAs($this->makeUser('admin', 'A'))
             ->test(CrEntries::class, ['mode' => 'all'])
@@ -187,7 +204,7 @@ class CrEntriesTest extends TestCase
     {
         $this->seedReceipt('CR', 'PENDING1');
         $fz = $this->seedReceipt('FZ', 'DONE1');
-        DB::table('central_reg')->insert(['sl_no' => 100, 'receipt_no' => 39028, 'first_receipt_sl_no' => $fz, 'user_id' => 'admin']);
+        $this->seedCr(crNo: 100, receiptNo: 39028, firstReceiptSlNo: $fz);
 
         Livewire::actingAs($this->makeUser('admin', 'A'))
             ->test(CrEntries::class, ['mode' => 'finalized'])
@@ -220,5 +237,130 @@ class CrEntriesTest extends TestCase
             ->test(CrEntries::class, ['mode' => 'all'])
             ->assertSee('MINE')
             ->assertDontSee('THEIRS');
+    }
+
+    public function test_the_three_identifiers_are_labelled_apart_and_all_shown(): void
+    {
+        $fz = $this->seedReceipt('FZ', 'DONE1');
+        $this->seedCr(crNo: 240361, receiptNo: 33774, firstReceiptSlNo: $fz);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(CrEntries::class, ['mode' => 'finalized'])
+            // The headings the office actually uses. "CR Receipt No" was our invention and is gone.
+            ->assertSee('First Receipt No')
+            ->assertSee('CR No')
+            ->assertSee('Receipt No')
+            ->assertDontSee('CR Receipt No')
+            ->assertSee((string) $fz)       // First Receipt No
+            ->assertSee('240361')           // CR No — previously not displayed at all
+            ->assertSee('33774');           // Receipt No
+    }
+
+    public function test_one_receipt_no_covers_a_whole_batch_while_cr_nos_stay_distinct(): void
+    {
+        $a = $this->seedReceipt('FZ', 'DRAFT-A');
+        $b = $this->seedReceipt('FZ', 'DRAFT-B');
+        $this->seedCr(crNo: 240361, receiptNo: 33774, firstReceiptSlNo: $a);
+        $this->seedCr(crNo: 240362, receiptNo: 33774, firstReceiptSlNo: $b);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(CrEntries::class, ['mode' => 'finalized'])
+            ->assertSee('240361')
+            ->assertSee('240362')
+            ->assertSee('33774');
+    }
+
+    public function test_a_double_booked_draft_shows_the_earliest_cr_no_and_is_flagged(): void
+    {
+        // 249 legacy drafts look like this: booked into the register twice, under two receipts.
+        $fz = $this->seedReceipt('FZ', 'DOUBLE1');
+        $this->seedCr(crNo: 98404, receiptNo: 25889, firstReceiptSlNo: $fz);
+        $this->seedCr(crNo: 97466, receiptNo: 25728, firstReceiptSlNo: $fz);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(CrEntries::class, ['mode' => 'finalized'])
+            ->assertSee('97466')     // the earliest booking wins, deterministically
+            ->assertSee('25728')
+            ->assertSee('×2');       // and the row is flagged rather than quietly hiding the other
+    }
+
+    public function test_a_blocked_cr_entry_is_marked_on_the_list(): void
+    {
+        $fz = $this->seedReceipt('FZ', 'BLOCKED1');
+        $this->seedCr(crNo: 240361, receiptNo: 33774, firstReceiptSlNo: $fz, extra: [
+            'blocked_cr' => 1,
+            'blocked_reason' => 'Draft returned by bank',
+            'blocked_date' => '2024-02-01',
+            'blocked_by_user' => 'supervisor',
+        ]);
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(CrEntries::class, ['mode' => 'finalized'])
+            ->assertSee('BLOCKED')
+            ->assertSee('Draft returned by bank');
+    }
+
+    public function test_search_matches_any_of_the_three_identifiers(): void
+    {
+        $fz = $this->seedReceipt('FZ', 'DONE1');
+        $this->seedReceipt('FZ', 'OTHER1');
+        $this->seedCr(crNo: 240361, receiptNo: 33774, firstReceiptSlNo: $fz);
+
+        $admin = $this->makeUser('admin', 'A');
+
+        foreach (['240361', '33774', (string) $fz] as $term) {
+            Livewire::actingAs($admin)
+                ->test(CrEntries::class, ['mode' => 'finalized'])
+                ->set('search', $term)
+                ->assertSee('DONE1')
+                ->assertDontSee('OTHER1');
+        }
+    }
+
+    public function test_search_still_finds_a_draft_number(): void
+    {
+        $this->seedReceipt('FZ', 'DRAFT-XYZ');
+        $this->seedReceipt('FZ', 'OTHER1');
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(CrEntries::class, ['mode' => 'finalized'])
+            ->set('search', 'xyz')
+            ->assertSee('DRAFT-XYZ')
+            ->assertDontSee('OTHER1');
+    }
+
+    public function test_the_date_range_filters_by_entry_date_and_is_open_by_default(): void
+    {
+        $this->seedReceipt('FZ', 'JANUARY1', 'admin', '2024-01-15');
+        $this->seedReceipt('FZ', 'MARCH1', 'admin', '2024-03-20');
+
+        $admin = $this->makeUser('admin', 'A');
+
+        // Blank by default: unlike legacy, the screen does not silently hide everything but today.
+        Livewire::actingAs($admin)
+            ->test(CrEntries::class, ['mode' => 'finalized'])
+            ->assertSee('JANUARY1')
+            ->assertSee('MARCH1');
+
+        Livewire::actingAs($admin)
+            ->test(CrEntries::class, ['mode' => 'finalized'])
+            ->set('fromDate', '2024-03-01')
+            ->set('toDate', '2024-03-31')
+            ->assertSee('MARCH1')
+            ->assertDontSee('JANUARY1');
+    }
+
+    public function test_clearing_filters_restores_the_full_list(): void
+    {
+        $this->seedReceipt('FZ', 'JANUARY1', 'admin', '2024-01-15');
+        $this->seedReceipt('FZ', 'MARCH1', 'admin', '2024-03-20');
+
+        Livewire::actingAs($this->makeUser('admin', 'A'))
+            ->test(CrEntries::class, ['mode' => 'finalized'])
+            ->set('fromDate', '2024-03-01')
+            ->assertDontSee('JANUARY1')
+            ->call('resetFilters')
+            ->assertSee('JANUARY1')
+            ->assertSee('MARCH1');
     }
 }
