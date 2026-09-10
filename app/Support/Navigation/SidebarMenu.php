@@ -92,6 +92,8 @@ class SidebarMenu
         'entrysection.view_all_cr_entries' => 'cr-entries.index',
         'entrysection.pending_cr_entries' => 'cr-entries.pending',
         'entrysection.finalized_cr_entries' => 'cr-entries.finalized',
+        'entrysection.block_cr_nos' => 'cr-block.index',
+        'entrysection.blocked_cr_lists' => 'cr-block.blocked',
 
 
     ];

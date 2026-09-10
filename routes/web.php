@@ -28,6 +28,7 @@ use App\Livewire\FirstRegister\FirstEntry; // Entry Section: Entry First Registe
 use App\Livewire\FirstRegister\ShowFirstEntry; // Entry Section: first-entry detail page
 use App\Livewire\CentralRegister\EntryCr; // Entry Section: Entry CR / CR generation (menu 201)
 use App\Livewire\CentralRegister\CrEntries; // Entry Section: Central Register lists (menu 202-204)
+use App\Livewire\CentralRegister\BlockCr; // Entry Section: Block / Blocked CR (menu 205-206)
 use App\Livewire\Dashboard; // Analytics dashboard
 
 
@@ -206,5 +207,15 @@ Route::middleware('auth')->group(function () {
             ->middleware('can:entrysection.finalized_cr_entries')
             ->defaults('mode', 'finalized')
             ->name('cr-entries.finalized');
+
+        // Central Register — Block / Blocked CR (menu 205–206). One component, two modes.
+        Route::get('/central-register/block', BlockCr::class)
+            ->middleware('can:entrysection.block_cr_nos')
+            ->name('cr-block.index');
+
+        Route::get('/central-register/blocked', BlockCr::class)
+            ->middleware('can:entrysection.blocked_cr_lists')
+            ->defaults('mode', 'blocked')
+            ->name('cr-block.blocked');
     });
 });
