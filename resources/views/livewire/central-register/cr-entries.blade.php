@@ -141,10 +141,10 @@
                             @if ($doubleBooked)
                                 {{-- Legacy defect: this draft was booked into the register more than
                                      once. We show the earliest and flag it rather than hide it. --}}
-                                <span title="This draft has {{ $entry->centralRegs->count() }} Central Register entries: CR {{ $entry->centralRegs->pluck('sl_no')->join(', ') }}. Showing the earliest."
-                                    class="ml-1 inline-block cursor-help rounded px-1.5 py-0.5 text-[10px] font-bold {{ $tones['amber'] }}">
-                                    ×{{ $entry->centralRegs->count() }}
-                                </span>
+                                <x-tooltip text="This draft has {{ $entry->centralRegs->count() }} Central Register entries: CR {{ $entry->centralRegs->pluck('sl_no')->join(', ') }}. Showing the earliest."
+                                    class="ml-1 align-middle">
+                                    <span class="inline-block rounded px-1.5 py-0.5 text-[10px] font-bold {{ $tones['amber'] }}">×{{ $entry->centralRegs->count() }}</span>
+                                </x-tooltip>
                             @endif
                         </td>
                         <td class="px-2 py-1.5 font-semibold text-slate-800 dark:text-slate-100">{{ $cr?->receipt_no ?? '—' }}</td>
@@ -163,11 +163,13 @@
                             @if ($cr?->isBlocked())
                                 {{-- A blocked CR is under objection. An operator must never read this
                                      screen and assume the booking is clear. --}}
-                                <span title="Blocked{{ $cr->blocked_date ? ' on ' . $cr->blocked_date->format('d-m-Y') : '' }}{{ $cr->blocked_by_user ? ' by ' . $cr->blocked_by_user : '' }}{{ $cr->blocked_reason ? ' — ' . $cr->blocked_reason : '' }}"
-                                    class="ml-1 inline-flex cursor-help items-center gap-1 rounded-md bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
-                                    <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
-                                    BLOCKED
-                                </span>
+                                <x-tooltip text="Blocked{{ $cr->blocked_date ? ' on ' . $cr->blocked_date->format('d-m-Y') : '' }}{{ $cr->blocked_by_user ? ' by ' . $cr->blocked_by_user : '' }}{{ $cr->blocked_reason ? ' — ' . $cr->blocked_reason : '' }}"
+                                    class="ml-1 align-middle">
+                                    <span class="inline-flex items-center gap-1 rounded-md bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+                                        <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 0 0 5.636 5.636m12.728 12.728A9 9 0 0 1 5.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+                                        BLOCKED
+                                    </span>
+                                </x-tooltip>
                             @endif
                         </td>
                         @if ($showActions)
